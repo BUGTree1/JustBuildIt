@@ -1,0 +1,15 @@
+{
+  "configurations": [
+    {
+      "name": "Win32",
+      "includePath": ["${workspaceFolder}/**"],
+      "defines": ["_DEBUG", "UNICODE", "_UNICODE"],
+      "windowsSdkVersion": "10.0.22621.0",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "",
+      "compilerPath": "C:\\path_progs\\x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev1\\mingw64\\bin\\gcc.exe"
+    }
+  ],
+  "version": 4
+}
