@@ -35,14 +35,14 @@ Is just coping a template project (directory) from `./cpp_project_templates/<tem
 
 ## Quick Start
 
-##### If you have make
+#### If you have make
 
 ```console
 $ make package
 $ buildit -t cpp test
 ```
 
-##### If you dont
+#### If you dont
 
 ```console
 $ python3 maker.py package
