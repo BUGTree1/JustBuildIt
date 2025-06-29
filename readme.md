@@ -7,22 +7,30 @@
 
 # Just Build It
 
-Is a simple python 3.8+ build system for c++ that:
+Is a simple python 3.11+ build system for c++ that:
 - Is designed for windows MinGW and Linux (But can adapt to many other toolchains)
 - Works on projects 
 - Can build them with one command in the terminal
 - Uses only python
+- Helps with maintaining git repositories
 
 # Usage
 
 ```
-buildit [-h] [-t TEMPLATE] [-i] [-u] [-c] [-r] project_path
+sage: buildit [-h] [-t TEMPLATE_NAME] [-c] [-r] [-i] [-p COMMIT_NAME] [-a REMOTE_URL] [project_path]
+
+project_path                    path to the project
 
 options:
-  -h, --help               show this help message and exit
-  -t, --template TEMPLATE  generate template with name TEMPLATE
-  -c, --clean              clean any build files
-  -r, --rebuild            rebuild whole project
+  -h, --help                    show this help message and exit
+  -t, --template TEMPLATE_NAME  generate template
+  -c, --clean                   clean any build files
+  -r, --rebuild                 rebuild whole project
+  -i, --init                    init a git repo
+  -p, --push COMMIT_NAME        push to remote repo with commit name
+  -a, --add-remote REMOTE_URL   add remote URL
+
+Available default templates are: cpp , glfw
 ```
 
 ###### Generating Templates
