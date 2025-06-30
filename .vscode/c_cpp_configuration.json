@@ -8,7 +8,7 @@
       "cStandard": "c17",
       "cppStandard": "c++17",
       "intelliSenseMode": "",
-      "compilerPath": "C:\\path_progs\\x86_64-14.2.0-release-posix-seh-ucrt-rt_v12-rev1\\mingw64\\bin\\gcc.exe"
+      "compilerPath": "C:\\path_progs\\mingw64\\bin\\gcc.exe"
     }
   ],
   "version": 4

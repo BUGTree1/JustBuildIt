@@ -250,7 +250,7 @@ has_to_compile = args.rebuild
 o_files : list[Path] = []
 cpp_files : list[Path] = []
 cpp_files_to_compile : list[tuple[Path,Path]] = []  
-for cpp_file in (project_path / source_path).rglob("**.cpp"):
+for cpp_file in (project_path / source_path).rglob("*.cpp"):
     cpp_relative = cpp_file.relative_to(project_path / source_path)
     o_relative = Path(cpp_file.with_suffix('.o').name)
     cpp_files.append(cpp_relative)
@@ -268,7 +268,7 @@ for cpp_file in (project_path / source_path).rglob("**.cpp"):
     
 c_files : list[Path] = []
 c_files_to_compile : list[tuple[Path,Path]] = []  
-for c_file in (project_path / source_path).rglob("**.c"):
+for c_file in (project_path / source_path).rglob("*.c"):
     c_relative = c_file.relative_to(project_path / source_path)
     o_relative = Path(c_file.with_suffix('.o').name)
     c_files.append(c_relative)
