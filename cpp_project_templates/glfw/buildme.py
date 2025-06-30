@@ -6,8 +6,8 @@ file_name              = "TEMPLATE.exe"
 compiler               = "g++"
 linker                 = "g++"
 flags                  = ['-Wall','-Wextra','-O3']
-compiler_flags         = ""
-linker_flags           = ""
+compiler_flags         = []
+linker_flags           = []
 output_path            = "bin"
 source_path            = "src"
 if platform_windows:
