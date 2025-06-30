@@ -346,8 +346,8 @@ if not has_errors and has_to_compile:
     status = subprocess.run(linker_args,cwd=project_path).returncode
     if status != 0:
         has_errors = True
-        
-if run_after_build:
+
+if run_after_build and (not has_errors):
     if build_dir.exists():
         if (build_dir / file_name).exists():
             subprocess.run((build_dir / file_name),cwd=build_dir)
