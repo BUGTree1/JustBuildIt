@@ -17,7 +17,7 @@ Is a simple python 3.11+ build system for c++ that:
 # Usage
 
 ```
-sage: buildit [-h] [-t TEMPLATE_NAME] [-c] [-r] [-i] [-p COMMIT_NAME] [-a REMOTE_URL] [project_path]
+Usage: buildit [-h] [-t TEMPLATE_NAME] [-c] [-r] [-i] [-p COMMIT_NAME] [-a REMOTE_URL] [project_path]
 
 project_path                    path to the project
 
