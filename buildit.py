@@ -46,12 +46,7 @@ else:
 
 template_path : Path = buildit_path / 'cpp_project_templates'
 
-desc = """Simple python 3.8+ build system for c++ that: 
-Is designed for windows MinGW and Linux (But can adapt to many other toolchains) , 
-Works on projects  , 
-Can build them with one command in the terminal , 
-Rebuilds itself when reconfigured , 
-By default is itself built by GNU Make , """
+desc = 'Simple python build system for c++'
 
 epi = "Currently there are no installed templates! install default with -i flag"
 template_names = []
@@ -62,15 +57,17 @@ if template_path.exists() and len(next(os.walk(template_path))[1]) > 0:
         
     epi += ' , '.join(template_names)
 
+usage = 'buildit [options] [project_path]'
 
-parser = argparse.ArgumentParser(prog='buildit',description=desc,epilog=epi)
+parser = argparse.ArgumentParser(prog='buildit',usage=usage,description=desc,epilog=epi)
 parser.add_argument('project_path',nargs='?',default='.',help='path to the project')           # positional argument
 parser.add_argument('-t', '--template',metavar='TEMPLATE_NAME',type=str, help='generate template')      # option that takes a value
 parser.add_argument('-c', '--clean', action='store_true', help='clean any build files')
 parser.add_argument('-r', '--rebuild', action='store_true', help='rebuild whole project')
-parser.add_argument('-i', '--init', action='store_true', help='init a git repo')
-parser.add_argument('-p', '--push',metavar='COMMIT_NAME',type=str, help='push to remote repo with commit name')
-parser.add_argument('-a', '--add-remote',metavar='REMOTE_URL',type=str, help='add remote URL')
+parser.add_argument('-i', '--init',metavar='REMOTE_URL',type=str, help='init a git repo with remote')
+parser.add_argument('-s', '--push',metavar='COMMIT_NAME',type=str, help='(-s - save) push to remote repo with commit name')
+parser.add_argument('-l', '--pull',action='store_true', help='(-l - load) pull lastest changes from remote repo')
+parser.add_argument('-d', '--discard',action='store_true', help='discard local changes and reset to remote repo')
 args = parser.parse_args()
 
 project_path : Path = Path.cwd() if (args.project_path == None or args.project_path == '.') else Path(args.project_path)
@@ -80,11 +77,8 @@ if not project_path.is_absolute():
     project_path = project_path.resolve()
     pass
 
-if args.init:
+if args.init != None:
     subprocess.run(['git','init','-b','main'],cwd=project_path)
-    exit(0)
-
-if args.add_remote != None:
     subprocess.run(['git','remote','add','origin',args.add_remote],cwd=project_path)
     exit(0)
 
@@ -92,6 +86,15 @@ if args.push != None:
     subprocess.run(['git','add','.'],cwd=project_path)
     subprocess.run(['git','commit','-m',args.push],cwd=project_path)
     subprocess.run(['git','push','origin','main'],cwd=project_path)
+    exit(0)
+
+if args.pull:
+    subprocess.run(['git','pull','origin','main'],cwd=project_path)
+    exit(0)
+
+if args.discard:
+    subprocess.run(['git','reset','--hard'],cwd=project_path)
+    subprocess.run(['git','pull','origin','main'],cwd=project_path)
     exit(0)
 
 if args.template != None:

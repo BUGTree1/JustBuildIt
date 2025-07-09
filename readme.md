@@ -11,24 +11,31 @@ Is a simple python 3.11+ build system for c++ that:
 - Is designed for windows MinGW and Linux (But can adapt to many other toolchains)
 - Works on projects 
 - Can build them with one command in the terminal
-- Uses only python
+- Uses only python (even makefile is optional)
 - Helps with maintaining git repositories
 
 # Usage
 
 ```
-Usage: buildit [-h] [-t TEMPLATE_NAME] [-c] [-r] [-i] [-p COMMIT_NAME] [-a REMOTE_URL] [project_path]
+usage: buildit [options] [project_path]
 
-project_path                    path to the project
+Simple python build system for c++
+
+positional arguments:
+  project_path          path to the project
 
 options:
-  -h, --help                    show this help message and exit
-  -t, --template TEMPLATE_NAME  generate template
-  -c, --clean                   clean any build files
-  -r, --rebuild                 rebuild whole project
-  -i, --init                    init a git repo
-  -p, --push COMMIT_NAME        push to remote repo with commit name
-  -a, --add-remote REMOTE_URL   add remote URL
+  -h, --help            show this help message and exit
+  -t, --template TEMPLATE_NAME
+                        generate template
+  -c, --clean           clean any build files
+  -r, --rebuild         rebuild whole project
+  -i, --init REMOTE_URL
+                        init a git repo with remote
+  -s, --push COMMIT_NAME
+                        (-s - save) push to remote repo with commit name
+  -l, --pull            (-l - load) pull lastest changes from remote repo
+  -d, --discard         discard local changes and reset to remote repo
 
 Available default templates are: cpp , glfw
 ```
@@ -70,8 +77,8 @@ linker                 = "g++"                     # Linker for linking all obje
 flags                  = ['-Wall','-Wextra','-O3'] # Flags for linker and compiler (you can specifiy compiler_flags and linker_flags)
 output_path            = "bin"                     # Directory for the executable (and all objects in subdirectory specified by obj_dir default is obj)
 source_path            = "src"                     # Directory with the source code (can be in subdirectories)
-libs                   = []                        # Libraries to link with
-lib_paths              = []                        # Directories with libraries
-include_paths          = []                        # Directories with headers
+libs                   = []                        # List of Libraries to link with
+lib_paths              = []                        # List of Directories with libraries
+include_paths          = []                        # List of Directories with headers
 
 ```
