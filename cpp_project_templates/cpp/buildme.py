@@ -11,5 +11,6 @@ linker_flags           = []
 output_path            = "bin"
 source_path            = "src"
 libs                   = []
+pkgconf_libs           = []
 lib_paths              = []
 include_paths          = []

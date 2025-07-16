@@ -26,17 +26,22 @@ def print_args(args : list[str]):
             print(' ',end='')
     print('')
 
-platform_windows : bool = platform.system().lower() == "windows"
-platform_macos : bool = platform.system().lower() == "macos"
-platform_linux : bool = platform.system().lower() == "linux"
+platform_windows : bool = "windows" in platform.system().lower()
+platform_macos : bool = "macos" in platform.system().lower()
+platform_linux : bool = "linux" in platform.system().lower()
 platform_other : bool = (not platform_windows) and (not platform_macos) and (not platform_linux)
 
-platform_x64 : bool = platform.architecture()[0] == "64bit"
-platform_x32 : bool = platform.architecture()[0] == "32bit"
-platform_arm : bool = "arm" in platform.uname()[4].lower()
+platform_os : str = platform.system().lower()
 
-triplet_arch : str = ("arm" if platform_arm else "x") + platform.architecture()[0].removesuffix('bit')
-target_triplet : str = platform.system().lower() + '-' + triplet_arch
+platform_64bit : bool = platform.architecture()[0] == "64bit"
+platform_32bit : bool = platform.architecture()[0] == "32bit"
+platform_bits : str = platform.architecture()[0].removesuffix('bit')
+platform_is_arm : bool = "arm" in platform.uname()[4].lower() or "aarch" in platform.uname()[4].lower()
+platform_arch_prefix : str = ("arm" if platform_is_arm else "x")
+
+platform_arch : str = platform_arch_prefix + platform_bits
+
+platform_triplet : str = platform_os + '-' + platform_arch
 
 # frozen attribute is when script is in exe by pyinstaller
 if getattr(sys, 'frozen', False):
@@ -118,6 +123,7 @@ output_path            = "OUTPUT_PATH_NOT_SET"
 source_path            = "SOURCE_PATH_NOT_SET"
 obj_dir                = "obj"
 libs                   = []
+pkgconf_libs           = []
 lib_paths              = []
 include_paths          = []
 output_name_arg        = "-o"
@@ -134,6 +140,7 @@ print('reading config from: ' + str(project_path / 'buildme.py'))
 # I have no other ideas than this "hack" for running the script and
 # retaining the variables because exec() does not work in functions
 # OBVIOUSLY ( another python classic XDDD )
+# edit: no longer in a function but i will leave it because it is python
 config_globals = globals()
 config_globals.update(locals())
 config_vars = runpy.run_path(str(project_path / 'buildme.py'),config_globals ,"__main__")
@@ -154,6 +161,7 @@ output_path            = config_vars['output_path']
 source_path            = config_vars['source_path']
 obj_dir                = config_vars['obj_dir']
 libs                   = config_vars['libs']
+pkgconf_libs           = config_vars['pkgconf_libs']
 lib_paths              = config_vars['lib_paths']
 include_paths          = config_vars['include_paths']
 output_name_arg        = config_vars['output_name_arg']
@@ -162,7 +170,7 @@ library_arg            = config_vars['library_arg']
 library_path_arg       = config_vars['library_path_arg']
 include_path_arg       = config_vars['include_path_arg']
 
-build_dir = project_path / output_path / target_triplet
+build_dir = project_path / output_path / platform_triplet
 if platform_windows:
     file_name = str(Path(file_name).with_suffix('.exe'))
 
@@ -175,7 +183,31 @@ if c_compiler == "":
 if compiler == "":
     compiler = c_compiler if c_compiler != "" else cxx_compiler
     
+if len(pkgconf_libs) > 0:
+    pkgconf_bin = shutil.which("pkgconf")
+    if pkgconf_bin == None:
+        pkgconf_bin = shutil.which("pkg-config")
+    if pkgconf_bin == None:
+        error("No valid pkgconf executable found!")
+
+    for pkgconf_lib in pkgconf_libs:
+        pkgconf_output = subprocess.run([pkgconf_bin, "--cflags", "--libs", pkgconf_lib],cwd=project_path,capture_output=True,universal_newlines=True)
+        pkgconf_cflags = pkgconf_output.stdout
+        
+        if pkgconf_output.returncode != 0:
+            error("Pkgconf couldnt find the library: " + pkgconf_lib)
+        
+        pkgconf_args = pkgconf_cflags.strip().split(' ')
+        print("pkgconf library: " + pkgconf_lib + " returned args: " + str(pkgconf_args))
+        flags.extend(pkgconf_args)
+
+flags_include_paths = []
+for flag in flags:
+    if flag.startswith("-I"):
+        flags_include_paths.append(flag.removeprefix("-I"))
+
 if create_vscode_settings:
+    
     if not (project_path / ".vscode").exists():
         (project_path / ".vscode").mkdir(parents=True)
 
@@ -186,42 +218,36 @@ if create_vscode_settings:
         vscode_config.write("\"" + include_paths[i] + "\"")
         if i < len(include_paths) - 1:
             vscode_config.write(',')
+            
+    for i in range(0,len(flags_include_paths)):
+        vscode_config.write("\"" + flags_include_paths[i] + "\"")
+        if i < len(flags_include_paths) - 1:
+            vscode_config.write(',')
 
     vscode_config.write("],\n\"defines\": [\n")
     vscode_config.write("\n],\n\"compilerPath\": ")
     c_compiler_abs_path : str = str(shutil.which(c_compiler))
-    c_compiler_abs_path = c_compiler_abs_path.replace('\\','\\\\')
+    if platform_windows:
+        c_compiler_abs_path = c_compiler_abs_path.replace('\\','\\\\')
     vscode_config.write("\"" + c_compiler_abs_path + "\"")
     vscode_config.write(",\n\"cStandard\": \"c17\",\n\"cppStandard\": \"gnu++17\",\n\"intelliSenseMode\": ")
-    if platform_windows:
+    vscode_config.write("\"")
+    if platform_windows or platform_macos or platform_linux:
+        vscode_config.write(platform_os + "-")
         if compiler == 'clang' or compiler == 'clang++':
-            vscode_config.write("\"windows-clang-" + triplet_arch + "\"")
-        elif compiler == 'msvc' or compiler == 'cl':
-            vscode_config.write("\"windows-msvc-" + triplet_arch + "\"")
+            vscode_config.write("clang")
+        elif compiler == 'cl':
+            vscode_config.write("msvc")
         else:
-            vscode_config.write("\"windows-gcc-" + triplet_arch + "\"")
-    elif platform_macos:
-        if compiler == 'clang' or compiler == 'clang++':
-            vscode_config.write("\"macos-clang-" + triplet_arch + "\"")
-        elif compiler == 'msvc' or compiler == 'cl':
-            vscode_config.write("\"macos-msvc-" + triplet_arch + "\"")
-        else:
-            vscode_config.write("\"macos-gcc-" + triplet_arch + "\"")
-    elif platform_linux:
-        if compiler == 'clang' or compiler == 'clang++':
-            vscode_config.write("\"linux-clang-" + triplet_arch + "\"")
-        elif compiler == 'msvc' or compiler == 'cl':
-            vscode_config.write("\"linux-msvc-" + triplet_arch + "\"")
-        else:
-            vscode_config.write("\"linux-gcc-" + triplet_arch + "\"")
+            vscode_config.write("gcc")
     else:
         if compiler == 'clang' or compiler == 'clang++':
-            vscode_config.write("\"clang-" + triplet_arch + "\"")
-        elif compiler == 'msvc' or compiler == 'cl':
-            vscode_config.write("\"msvc-" + triplet_arch + "\"")
+            vscode_config.write("clang")
+        elif compiler == 'cl':
+            vscode_config.write("msvc")
         else:
-            vscode_config.write("\"gcc-" + triplet_arch + "\"")
-        
+            vscode_config.write("gcc")
+    vscode_config.write("-" + platform_arch + "\"")
     vscode_config.write("\n}]\n,\n\"version\": 4\n}")
 
     vscode_config.close()
@@ -289,6 +315,13 @@ for c_file in (project_path / source_path).rglob("*.c"):
 
 has_errors = False
 if has_to_compile:
+    if shutil.which(c_compiler) == None:
+        error("Cant find the C compiler executable: " + c_compiler)
+    if shutil.which(cxx_compiler) == None:
+        error("Cant find the C++ compiler executable: " + cxx_compiler)
+    if shutil.which(linker) == None:
+        error("Cant find the Linker executable: " + linker)
+    
     for c_file,o_file in c_files_to_compile:
         compiler_args = []
         compiler_args.append(c_compiler)

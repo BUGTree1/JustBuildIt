@@ -10,9 +10,6 @@ compiler_flags         = []
 linker_flags           = []
 output_path            = "bin"
 source_path            = "src"
-if platform_windows:
-    libs               = ["glfw3","winmm","gdi32","user32","opengl32"]
-else:
-    libs               = ["glfw3"]
+pkgconf_libs           = ["glfw3"]
 lib_paths              = []
 include_paths          = []
