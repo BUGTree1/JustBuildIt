@@ -78,6 +78,7 @@ flags                  = ['-Wall','-Wextra','-O3'] # Flags for linker and compil
 output_path            = "bin"                     # Directory for the executable (and all objects in subdirectory specified by obj_dir default is obj)
 source_path            = "src"                     # Directory with the source code (can be in subdirectories)
 libs                   = []                        # List of Libraries to link with
+pkgconf_libs           = []                        # List of Libraries passed to pkgconf
 lib_paths              = []                        # List of Directories with libraries
 include_paths          = []                        # List of Directories with headers
 
