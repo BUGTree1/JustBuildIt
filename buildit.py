@@ -84,7 +84,7 @@ if not project_path.is_absolute():
 
 if args.init != None:
     subprocess.run(['git','init','-b','main'],cwd=project_path)
-    subprocess.run(['git','remote','add','origin',args.add_remote],cwd=project_path)
+    subprocess.run(['git','remote','add','origin',args.init],cwd=project_path)
     exit(0)
 
 if args.push != None:
