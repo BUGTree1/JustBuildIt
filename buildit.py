@@ -1,3 +1,4 @@
+from typing import NoReturn
 from pathlib import Path
 from sys import exit
 import subprocess
@@ -11,18 +12,32 @@ import os
 
 DEBUG = False
 
-def error(desc: str, err_code: int = 1):
+def error(desc: str, err_code: int = 1) -> NoReturn:
     print("Error: " + desc)
     exit(err_code)
 
-def print_args(args : list[str]):
+DEBUG_PREFIXES = ['-l','-m','-I','-L','-W']
+def pretty_arg(arg : str) -> str:
+    if not DEBUG:
+        for debug_prefix in DEBUG_PREFIXES:
+            if arg.startswith(debug_prefix):
+                    return ''
+        if Path(arg).is_absolute():
+            return Path(arg).name
+    
+    return arg
+
+def print_args(args : list[str],pkg_libs : list[str]):
+    if not DEBUG:
+        for pkg_lib in pkg_libs:
+            args.append('$(pkgconf ' + pkg_lib + ')')
+    
+    args_count = len(args) - 1
     print('$ ',end='')
-    for i in range(0,len(args)):
-        if not DEBUG and Path(args[i]).is_absolute():
-            print(Path(args[i]).name,end='')
-        else:
-            print(args[i],end='')
-        if i < len(args) - 1:
+    for i,arg in enumerate(args):
+        arg_to_print = pretty_arg(arg)
+        print(arg_to_print,end='')
+        if i < args_count and arg_to_print != '':
             print(' ',end='')
     print('')
 
@@ -170,6 +185,9 @@ library_arg            = config_vars['library_arg']
 library_path_arg       = config_vars['library_path_arg']
 include_path_arg       = config_vars['include_path_arg']
 
+if 'DEBUG' in config_vars.keys():
+    DEBUG = config_vars['DEBUG']
+
 build_dir = project_path / output_path / platform_triplet
 if platform_windows:
     file_name = str(Path(file_name).with_suffix('.exe'))
@@ -198,7 +216,7 @@ if len(pkgconf_libs) > 0:
             error("Pkgconf couldnt find the library: " + pkgconf_lib)
         
         pkgconf_args = pkgconf_cflags.strip().split(' ')
-        print("pkgconf library: " + pkgconf_lib + " returned args: " + str(pkgconf_args))
+        # print("pkgconf library: " + pkgconf_lib + " returned args: " + str(pkgconf_args))
         flags.extend(pkgconf_args)
 
 flags_include_paths = []
@@ -334,7 +352,7 @@ if has_to_compile:
         for include_path in include_paths:
             compiler_args.append(include_path_arg)
             compiler_args.append(include_path)
-        print_args(compiler_args)
+        print_args(compiler_args,pkgconf_libs)
         status = subprocess.run(compiler_args,cwd=project_path).returncode
         if status != 0:
             has_errors = True
@@ -351,7 +369,7 @@ if has_to_compile:
         for include_path in include_paths:
             compiler_args.append(include_path_arg)
             compiler_args.append(include_path)
-        print_args(compiler_args)
+        print_args(compiler_args,pkgconf_libs)
         status = subprocess.run(compiler_args,cwd=project_path).returncode
         if status != 0:
             has_errors = True
@@ -378,7 +396,7 @@ if not has_errors and has_to_compile:
         linker_args.append(library_arg)
         linker_args.append(lib)
     
-    print_args(linker_args)
+    print_args(linker_args, pkgconf_libs)
     status = subprocess.run(linker_args,cwd=project_path).returncode
     if status != 0:
         has_errors = True
