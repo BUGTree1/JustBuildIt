@@ -28,13 +28,14 @@ def pretty_arg(arg : str) -> str:
     return arg
 
 def print_args(args : list[str],pkg_libs : list[str]):
+    args_to_print = args.copy()
     if not DEBUG:
         for pkg_lib in pkg_libs:
-            args.append('$(pkgconf ' + pkg_lib + ')')
+            args_to_print.append('$(pkgconf ' + pkg_lib + ')')
     
-    args_count = len(args) - 1
+    args_count = len(args_to_print) - 1
     print('$ ',end='')
-    for i,arg in enumerate(args):
+    for i,arg in enumerate(args_to_print):
         arg_to_print = pretty_arg(arg)
         print(arg_to_print,end='')
         if i < args_count and arg_to_print != '':
