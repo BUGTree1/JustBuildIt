@@ -46,7 +46,7 @@ def preprocess_config_string(string: str, config_path: Path) -> str:
 def preprocess_config_list(list: list[str], config_path: Path) -> list[str]:
     newlist = []
     for string in list:
-        newlist.append(preprocess_config_string(string,config_path))
+        newlist.extend(shlex.split(preprocess_config_string(string,config_path)))
     return newlist
 
 DEBUG_PREFIXES = ['-l','-m','-I','-L','-W']
