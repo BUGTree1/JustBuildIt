@@ -175,6 +175,7 @@ libs                   = []
 pkgconf_libs           = []
 lib_paths              = []
 include_paths          = []
+run_args               = []
 output_name_arg        = "-o"
 compile_only_arg       = "-c"
 library_arg            = "-l"
@@ -215,6 +216,7 @@ libs                   = preprocess_config_list(config_vars['libs'],project_path
 pkgconf_libs           = preprocess_config_list(config_vars['pkgconf_libs'],project_path)
 lib_paths              = preprocess_config_list(config_vars['lib_paths'],project_path)
 include_paths          = preprocess_config_list(config_vars['include_paths'],project_path)
+run_args               = preprocess_config_list(config_vars['run_args'],project_path)
 output_name_arg        = preprocess_config_string(config_vars['output_name_arg'],project_path)
 compile_only_arg       = preprocess_config_string(config_vars['compile_only_arg'],project_path)
 library_arg            = preprocess_config_string(config_vars['library_arg'],project_path)
@@ -450,4 +452,6 @@ if (has_to_compile) and (not has_errors) and (len(exec_postbuild) != 0):
 if (run_after_build) and (not has_errors):
     if build_dir.exists():
         if (build_dir / file_name).exists():
-            subprocess.run((build_dir / file_name),cwd=build_dir)
+            new_run_args = [str(build_dir / file_name)]
+            new_run_args.extend(run_args)
+            subprocess.run(new_run_args,cwd=build_dir)

@@ -14,6 +14,7 @@ libs                   = []
 pkgconf_libs           = ["glfw3"]
 lib_paths              = []
 include_paths          = []
+run_args               = []
 
 exec_postbuild         = []
 exec_prebuild          = []

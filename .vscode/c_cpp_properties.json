@@ -6,10 +6,10 @@
 "defines": [
 
 ],
-"compilerPath": "/usr/bin/g++",
+"compilerPath": "C:\\path_progs\\mingw64\\bin\\g++.EXE",
 "cStandard": "c17",
 "cppStandard": "gnu++17",
-"intelliSenseMode": "linux-gcc-x64"
+"intelliSenseMode": "windows-gcc-x64"
 }]
 ,
 "version": 4

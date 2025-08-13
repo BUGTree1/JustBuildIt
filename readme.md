@@ -7,7 +7,7 @@
 
 # Just Build It
 
-Is a simple python 3.11+ build system for c++ that:
+Is a simple python build system for c++ that:
 - Is designed for windows MinGW and Linux (But can adapt to many other toolchains)
 - Works on projects 
 - Can build them with one command in the terminal
@@ -82,8 +82,9 @@ libs                   = []                        # List of Libraries to link w
 pkgconf_libs           = []                        # List of Libraries passed to pkgconf
 lib_paths              = []                        # List of Directories with libraries
 include_paths          = []                        # List of Directories with headers
+run_args               = []                        # Arguments to pass to the executable when run_after_build is True
 
-exec_postbuild         = [] # List of Command lines to run after a successful build
-exec_prebuild          = [] # List of Command lines to run before the build
+exec_postbuild         = []                        # List of Command lines to run after a successful build
+exec_prebuild          = []                        # List of Command lines to run before the build
 
 ```
