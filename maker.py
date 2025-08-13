@@ -7,7 +7,6 @@ import os
 def clean():
 	shutil.rmtree(Path.cwd() / 'dist',ignore_errors=True)
 	shutil.rmtree(Path.cwd() / 'build',ignore_errors=True)
-	shutil.rmtree(Path.cwd() / 'test',ignore_errors=True)
 	os.remove(Path.cwd() / 'buildit.spec')
 
 def build():

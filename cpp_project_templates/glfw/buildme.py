@@ -10,6 +10,10 @@ compiler_flags         = []
 linker_flags           = []
 output_path            = "bin"
 source_path            = "src"
+libs                   = []
 pkgconf_libs           = ["glfw3"]
 lib_paths              = []
 include_paths          = []
+
+exec_postbuild         = []
+exec_prebuild          = []

@@ -14,3 +14,6 @@ libs                   = []
 pkgconf_libs           = []
 lib_paths              = []
 include_paths          = []
+
+exec_postbuild         = []
+exec_prebuild          = []

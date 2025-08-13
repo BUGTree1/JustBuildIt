@@ -13,6 +13,7 @@ Is a simple python 3.11+ build system for c++ that:
 - Can build them with one command in the terminal
 - Uses only python (even makefile is optional)
 - Helps with maintaining git repositories
+- All its config options can contain bash like commands (e.g. "$(echo Hello)") so you can have any other program "print" values as for example the compiler arguments
 
 # Usage
 
@@ -81,5 +82,8 @@ libs                   = []                        # List of Libraries to link w
 pkgconf_libs           = []                        # List of Libraries passed to pkgconf
 lib_paths              = []                        # List of Directories with libraries
 include_paths          = []                        # List of Directories with headers
+
+exec_postbuild         = [] # List of Command lines to run after a successful build
+exec_prebuild          = [] # List of Command lines to run before the build
 
 ```

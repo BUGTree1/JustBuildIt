@@ -1,10 +1,12 @@
 from typing import NoReturn
 from pathlib import Path
+from re import finditer
 from sys import exit
 import subprocess
 import argparse
 import platform
 import shutil
+import shlex
 import runpy
 import time
 import sys
@@ -15,6 +17,37 @@ DEBUG = False
 def error(desc: str, err_code: int = 1) -> NoReturn:
     print("Error: " + desc)
     exit(err_code)
+        
+def run_shell_cmd_at_and_capture_stdout(command: str, run_dir: Path) -> str:
+    print("$ " + command)
+    proc = subprocess.Popen(command,cwd=run_dir,shell=True,text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    proc.wait()
+    if proc.stderr != None:
+        print(proc.stderr.read(),end='')
+    if proc.stdout != None:
+        return proc.stdout.read()
+    return ''
+    
+def run_shell_cmd_at(command: str, run_dir: Path) -> None:
+    print(run_shell_cmd_at_and_capture_stdout(command,run_dir))
+    
+# returns string with $(cmd) replaced by the return text of command "cmd"
+def get_string_from_shell(cmd: str, run_dir: Path) -> str:
+    new_string = cmd
+    for cmd_match in finditer(r"\$\(.*\)",cmd):
+        command = cmd_match.string.removeprefix('$(').removesuffix(')')
+        replacement = run_shell_cmd_at_and_capture_stdout(command,run_dir)
+        new_string = new_string[:cmd_match.pos] + replacement + new_string[cmd_match.endpos:]
+    return new_string
+        
+def preprocess_config_string(string: str, config_path: Path) -> str:
+    return get_string_from_shell(string,config_path)
+
+def preprocess_config_list(list: list[str], config_path: Path) -> list[str]:
+    newlist = []
+    for string in list:
+        newlist.append(preprocess_config_string(string,config_path))
+    return newlist
 
 DEBUG_PREFIXES = ['-l','-m','-I','-L','-W']
 def pretty_arg(arg : str) -> str:
@@ -127,7 +160,7 @@ create_vscode_settings = False
 run_after_build        = False
 proj_name              = "NAME_NOT_SET"
 proj_version           = "0.0.0.0"
-file_name              = "relative_NOT_SET"
+file_name              = "FILENAME_NOT_SET"
 compiler               = "g++"
 c_compiler             = ""
 cxx_compiler           = ""
@@ -147,6 +180,8 @@ compile_only_arg       = "-c"
 library_arg            = "-l"
 library_path_arg       = "-L"
 include_path_arg       = "-I"
+exec_postbuild         = []
+exec_prebuild          = []
 
 if not (project_path / 'buildme.py').exists():
     error("Not a valid project: Does not have an buildme.py")
@@ -163,28 +198,30 @@ config_vars = runpy.run_path(str(project_path / 'buildme.py'),config_globals ,"_
 
 create_vscode_settings = config_vars['create_vscode_settings']
 run_after_build        = config_vars['run_after_build']
-proj_name              = config_vars['proj_name']
-proj_version           = config_vars['proj_version']
-file_name              = config_vars['file_name']
-compiler               = config_vars['compiler']
-c_compiler             = config_vars['c_compiler']
-cxx_compiler           = config_vars['cxx_compiler']
-linker                 = config_vars['linker']
-flags                  = config_vars['flags']
-compiler_flags         = config_vars['compiler_flags']
-linker_flags           = config_vars['linker_flags']
-output_path            = config_vars['output_path']
-source_path            = config_vars['source_path']
-obj_dir                = config_vars['obj_dir']
-libs                   = config_vars['libs']
-pkgconf_libs           = config_vars['pkgconf_libs']
-lib_paths              = config_vars['lib_paths']
-include_paths          = config_vars['include_paths']
-output_name_arg        = config_vars['output_name_arg']
-compile_only_arg       = config_vars['compile_only_arg']
-library_arg            = config_vars['library_arg']
-library_path_arg       = config_vars['library_path_arg']
-include_path_arg       = config_vars['include_path_arg']
+proj_name              = preprocess_config_string(config_vars['proj_name'],project_path)
+proj_version           = preprocess_config_string(config_vars['proj_version'],project_path)
+file_name              = preprocess_config_string(config_vars['file_name'],project_path)
+compiler               = preprocess_config_string(config_vars['compiler'],project_path)
+c_compiler             = preprocess_config_string(config_vars['c_compiler'],project_path)
+cxx_compiler           = preprocess_config_string(config_vars['cxx_compiler'],project_path)
+linker                 = preprocess_config_string(config_vars['linker'],project_path)
+flags                  = preprocess_config_list(config_vars['flags'],project_path)
+compiler_flags         = preprocess_config_list(config_vars['compiler_flags'],project_path)
+linker_flags           = preprocess_config_list(config_vars['linker_flags'],project_path)
+output_path            = preprocess_config_string(config_vars['output_path'],project_path)
+source_path            = preprocess_config_string(config_vars['source_path'],project_path)
+obj_dir                = preprocess_config_string(config_vars['obj_dir'],project_path)
+libs                   = preprocess_config_list(config_vars['libs'],project_path)
+pkgconf_libs           = preprocess_config_list(config_vars['pkgconf_libs'],project_path)
+lib_paths              = preprocess_config_list(config_vars['lib_paths'],project_path)
+include_paths          = preprocess_config_list(config_vars['include_paths'],project_path)
+output_name_arg        = preprocess_config_string(config_vars['output_name_arg'],project_path)
+compile_only_arg       = preprocess_config_string(config_vars['compile_only_arg'],project_path)
+library_arg            = preprocess_config_string(config_vars['library_arg'],project_path)
+library_path_arg       = preprocess_config_string(config_vars['library_path_arg'],project_path)
+include_path_arg       = preprocess_config_string(config_vars['include_path_arg'],project_path)
+exec_postbuild         = preprocess_config_list(config_vars['exec_postbuild'],project_path)
+exec_prebuild          = preprocess_config_list(config_vars['exec_prebuild'],project_path)
 
 if 'DEBUG' in config_vars.keys():
     DEBUG = config_vars['DEBUG']
@@ -216,19 +253,19 @@ if len(pkgconf_libs) > 0:
         if pkgconf_output.returncode != 0:
             error("Pkgconf couldnt find the library: " + pkgconf_lib)
         
-        pkgconf_args = pkgconf_cflags.strip().split(' ')
+        pkgconf_args = pkgconf_cflags.strip().split(" ")
+        
         # print("pkgconf library: " + pkgconf_lib + " returned args: " + str(pkgconf_args))
         flags.extend(pkgconf_args)
 
-flags_include_paths = []
-for flag in flags:
-    if flag.startswith("-I"):
-        flags_include_paths.append(flag.removeprefix("-I"))
-
 if create_vscode_settings:
-    
     if not (project_path / ".vscode").exists():
         (project_path / ".vscode").mkdir(parents=True)
+
+    flags_include_paths = []
+    for flag in flags:
+        if flag.startswith("-I"):
+            flags_include_paths.append(flag.removeprefix("-I"))
 
     vscode_config = open(project_path / ".vscode" / "c_cpp_properties.json","w+")
     vscode_config.write("{\n\"configurations\": [\n{\n\"name\": \"Generic\",\n\"includePath\": [")
@@ -334,6 +371,10 @@ for c_file in (project_path / source_path).rglob("*.c"):
 
 has_errors = False
 if has_to_compile:
+    if len(exec_prebuild) != 0:
+        for command in exec_prebuild:
+            run_shell_cmd_at(command,project_path)
+    
     if shutil.which(c_compiler) == None:
         error("Cant find the C compiler executable: " + c_compiler)
     if shutil.which(cxx_compiler) == None:
@@ -402,7 +443,11 @@ if not has_errors and has_to_compile:
     if status != 0:
         has_errors = True
 
-if run_after_build and (not has_errors):
+if (has_to_compile) and (not has_errors) and (len(exec_postbuild) != 0):
+    for command in exec_postbuild:
+        run_shell_cmd_at(command,project_path)
+
+if (run_after_build) and (not has_errors):
     if build_dir.exists():
         if (build_dir / file_name).exists():
             subprocess.run((build_dir / file_name),cwd=build_dir)
