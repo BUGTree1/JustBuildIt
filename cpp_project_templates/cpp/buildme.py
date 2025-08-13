@@ -1,5 +1,7 @@
 create_vscode_settings = True
 run_after_build        = True
+auto_out_file_ext      = True
+build_type             = "executable"
 proj_name              = "TEMPLATE"
 proj_version           = "0.1.0.0"
 file_name              = "TEMPLATE"

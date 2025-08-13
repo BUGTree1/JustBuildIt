@@ -60,7 +60,7 @@ def pretty_arg(arg : str) -> str:
     
     return arg
 
-def print_args(args : list[str],pkg_libs : list[str]):
+def print_args(args : list[str],pkg_libs : list[str]) -> None:
     args_to_print = args.copy()
     if not DEBUG:
         for pkg_lib in pkg_libs:
@@ -74,6 +74,16 @@ def print_args(args : list[str],pkg_libs : list[str]):
         if i < args_count and arg_to_print != '':
             print(' ',end='')
     print('')
+    
+def posix_static_lib(out_dir : str,out_file : str, objects : list[str]) -> None:
+    out_file = 'lib' + out_file
+    print(f"$ ar rcs {Path(out_dir) / out_file} ",end='')
+    for obj in objects:
+        print(obj,end='')
+    print()
+    cmd_args = ['ar','rcs',str(Path(out_dir) / out_file)]
+    cmd_args.extend(objects)
+    subprocess.run(cmd_args,cwd=Path(out_dir))
 
 platform_windows : bool = "windows" in platform.system().lower()
 platform_macos : bool = "macos" in platform.system().lower()
@@ -158,7 +168,9 @@ if args.template != None:
 
 create_vscode_settings = False
 run_after_build        = False
-proj_name              = "NAME_NOT_SET"
+auto_out_file_ext      = False
+build_type             = "BUILD_TYPE_NOT_SET"
+proj_name              = "PROJ_NAME_NOT_SET"
 proj_version           = "0.0.0.0"
 file_name              = "FILENAME_NOT_SET"
 compiler               = "g++"
@@ -199,6 +211,8 @@ config_vars = runpy.run_path(str(project_path / 'buildme.py'),config_globals ,"_
 
 create_vscode_settings = config_vars['create_vscode_settings']
 run_after_build        = config_vars['run_after_build']
+auto_out_file_ext      = config_vars['auto_out_file_ext']
+build_type             = preprocess_config_string(config_vars['build_type'],project_path)
 proj_name              = preprocess_config_string(config_vars['proj_name'],project_path)
 proj_version           = preprocess_config_string(config_vars['proj_version'],project_path)
 file_name              = preprocess_config_string(config_vars['file_name'],project_path)
@@ -228,10 +242,6 @@ exec_prebuild          = preprocess_config_list(config_vars['exec_prebuild'],pro
 if 'DEBUG' in config_vars.keys():
     DEBUG = config_vars['DEBUG']
 
-build_dir = project_path / output_path / platform_triplet
-if platform_windows:
-    file_name = str(Path(file_name).with_suffix('.exe'))
-
 if cxx_compiler == "":
     cxx_compiler = compiler
     
@@ -240,7 +250,43 @@ if c_compiler == "":
     
 if compiler == "":
     compiler = c_compiler if c_compiler != "" else cxx_compiler
-    
+
+is_compiler_msvc= False
+if compiler == 'msvc' or compiler == 'cl':
+    is_compile_msvc = True
+
+build_dir = project_path / output_path / platform_triplet
+
+desired_file_extension = ''
+project_runnable = True
+
+match(build_type):
+    case "executable":
+        project_runnable = True
+        if is_compiler_msvc:
+            desired_file_extension = '.exe'
+        else:
+            desired_file_extension = ''
+    case "static":
+        project_runnable = False
+        flags.append('-static')
+        if is_compiler_msvc:
+            desired_file_extension = '.lib'
+        else:
+            desired_file_extension = '.a'
+    case "shared":
+        project_runnable = False
+        flags.append('-shared')
+        if is_compiler_msvc:
+            desired_file_extension = '.dll'
+        else:
+            desired_file_extension = '.so'
+    case _:
+        error(f"build_type: {build_type} not valid!\nsupported are: static, shared, executable")
+
+if auto_out_file_ext:
+    file_name = file_name + desired_file_extension
+
 if len(pkgconf_libs) > 0:
     pkgconf_bin = shutil.which("pkgconf")
     if pkgconf_bin == None:
@@ -418,7 +464,7 @@ if has_to_compile:
         if status != 0:
             has_errors = True
         
-if not has_errors and has_to_compile:
+if not has_errors and has_to_compile and build_type != 'static':
     linker_args = []
     linker_args.append(linker)
     for o_file in o_files:
@@ -445,11 +491,19 @@ if not has_errors and has_to_compile:
     if status != 0:
         has_errors = True
 
-if (has_to_compile) and (not has_errors) and (len(exec_postbuild) != 0):
-    for command in exec_postbuild:
-        run_shell_cmd_at(command,project_path)
+if (has_to_compile) and (not has_errors):
+    if build_type == "static" and (not is_compiler_msvc):
+        obj_list = []
+        for obj in o_files:
+            obj_list.append(str(build_dir / obj_dir / obj))
+        
+        posix_static_lib(str(build_dir),file_name,obj_list)
+    
+    if len(exec_postbuild) != 0:
+        for command in exec_postbuild:
+            run_shell_cmd_at(command,project_path)
 
-if (run_after_build) and (not has_errors):
+if (run_after_build) and (not has_errors) and ():
     if build_dir.exists():
         if (build_dir / file_name).exists():
             new_run_args = [str(build_dir / file_name)]
