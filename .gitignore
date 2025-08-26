@@ -1,4 +1,3 @@
-.vscode/
-test/
-buildit.exe
-buildit
+/.vscode/
+/test/
+/bin/

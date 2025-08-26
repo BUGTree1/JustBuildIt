@@ -7,61 +7,42 @@
 
 # Just Build It
 
-Is a simple python build system for c++ that:
+Is a simple [D](https://dlang.org) build system for C/C++ that:
 - Is designed for windows MinGW and Linux (But can adapt to many other toolchains)
-- Works on projects 
-- Can build them with one command in the terminal
-- Uses only python (even makefile is optional)
+- Works on projects
+- Can build a project without any arguments in one command
 - Helps with maintaining git repositories
 - All its config options can contain bash like commands (e.g. "$(echo Hello)") so you can have any other program "print" values as for example the compiler arguments
 
 # Usage
 
 ```
-usage: buildit [options] [project_path]
+Usage: buildit [options] [project_path]
 
-Simple python build system for c++
+Simple D build system for C/C++
 
 positional arguments:
-  project_path          path to the project
+  project_path                  path to the project (if not specified will use current working directory)
 
 options:
-  -h, --help            show this help message and exit
-  -t, --template TEMPLATE_NAME
-                        generate template
-  -c, --clean           clean any build files
-  -r, --rebuild         rebuild whole project
-  -i, --init REMOTE_URL
-                        init a git repo with remote
-  -s, --push COMMIT_NAME
-                        (-s - save) push to remote repo with commit name
-  -l, --pull            (-l - load) pull lastest changes from remote repo
-  -d, --discard         discard local changes and reset to remote repo
+  -h, --help                    show this help message and exit
+  -t, --template TEMPLATE_NAME  generate template
+  -c, --clean                   clean any build files
+  -r, --rebuild                 rebuild whole project
+  -i, --init REMOTE_URL         init a git repo with remote
+  -s, --push COMMIT_NAME        (-s - save) push to remote repo with commit name
+  -l, --pull                    (-l - load) pull lastest changes from remote repo
+  -d, --discard                 discard local changes and reset to remote repo
 
-Available default templates are: cpp , glfw
+Available default templates are: cpp
 ```
 
-###### Generating Templates
-
-Is just coping a template project (directory) from `./cpp_project_templates/<template name>` 
-
-## Dependencies
-
-[argparse](https://pypi.org/project/argparse/)
+PS. Generating Templates is just coping a template project (directory) from `./cpp_project_templates/<template name>` to the project directory
 
 ## Quick Start
 
-#### If you have make
-
 ```console
-$ make package
-$ buildit -t cpp test
-```
-
-#### If you dont
-
-```console
-$ python3 maker.py package
+$ make
 $ buildit -t cpp test
 ```
 
