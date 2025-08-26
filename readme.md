@@ -14,6 +14,12 @@ Is a simple [D](https://dlang.org) build system for C/C++ that:
 - Helps with maintaining git repositories
 - All its config options can contain bash like commands (e.g. "$(echo Hello)") so you can have any other program "print" values as for example the compiler arguments
 
+# Included Libraries
+
+[D:Yaml by dlang-community](https://github.com/dlang-community/D-YAML)
+
+[commandr by robik](https://github.com/robik/commandr)
+
 # Usage
 
 ```

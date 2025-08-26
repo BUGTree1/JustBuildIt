@@ -20,6 +20,8 @@ OBJ_FILES := $(patsubst $(SRC_DIR)/%.d,$(OUT_DIR)/$(OBJ_DIR)/%$(OBJ_EXT),$(SRC_F
 
 .PHONY: test
 test: $(OUT_DIR)/$(OUT_FILE)
+	$(OUT_DIR)/$(OUT_FILE)
+	$(OUT_DIR)/$(OUT_FILE) -h
 	$(OUT_DIR)/$(OUT_FILE) -t cpp test
 
 $(OUT_DIR)/$(OUT_FILE): $(OBJ_FILES)
