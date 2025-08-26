@@ -1,0 +1,22 @@
+create_vscode_settings : true
+run_after_build        : true
+auto_out_file_ext      : true
+build_type             : "executable"
+proj_name              : "TEMPLATE"
+proj_version           : "0.1.0.0"
+file_name              : "TEMPLATE"
+compiler               : "g++"
+linker                 : "g++"
+flags                  : ['-Wall','-Wextra','-O3']
+compiler_flags         : []
+linker_flags           : []
+output_path            : "bin"
+source_path            : "src"
+libs                   : []
+pkgconf_libs           : []
+lib_paths              : []
+include_paths          : []
+run_args               : []
+
+exec_postbuild         : []
+exec_prebuild          : []
