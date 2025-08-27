@@ -21,11 +21,6 @@ struct Args_info{
 Args_info parse_args(string[] args){
     Args_info info;
 
-    // TODO: add all other args
-    // TODO: start compiling with std.process
-    // TODO: test std.process and paths with unicode characters (wstrings?)
-    // REM: to push `git add .` `git commit -m <commit name>` `git push origin main`
-
     ProgramArgs prog = new Program("test", "1.0")
           .summary("Command line parser")
           .author("John Doe <me@foo.bar.com>")
