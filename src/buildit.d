@@ -1,8 +1,3 @@
-import std.process;
-import std.traits;
-import std.stdio;
-import std.conv;
-import std.file;
 import config;
 import utils;
 import args;
@@ -16,8 +11,8 @@ version(Windows){
 int main(string[] args){
     Args_info args_info = parse_args(args);
 
-    string config_path = "./project_templates/cpp/buildme.yaml";
-    Config_Parsed cfg = parse_config(config_path);
-    writeln(cfg);
+    string config_path = slash(args_info.project_path , "buildme.yaml");
+    //Config_Parsed cfg = parse_config(config_path);
+    //writeln(cfg);
     return 0;
 }

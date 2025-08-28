@@ -1,7 +1,14 @@
 module utils;
-import std.stdio;
-import std.exception;
-import core.stdc.stdlib;
+public import std.stdio;
+public import std.exception;
+public import std.process;
+public import std.traits;
+public import std.conv;
+public import std.file;
+public import std.path;
+public import std.format;
+public import std.range.primitives;
+public import core.stdc.stdlib;
 
 void my_exit(int code = 1){
     exit(code);
@@ -33,4 +40,8 @@ void todo(string desc,int line = __LINE__, string file = __FILE__){
 void todo(int line = __LINE__, string file = __FILE__){
     writefln("TODO: %s:%d",file,line);
     my_exit();
+}
+
+string slash(T...)(T args) {
+    return buildNormalizedPath(args);
 }

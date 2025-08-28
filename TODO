@@ -1,5 +1,11 @@
+DONE:
+- std.process and paths WORKS with unicode characters
+
+TODO:
 - implement all arguments from readme
-- test std.process and paths with unicode characters (wstrings?)
+- add path normalizing to all config paths to make them absolute (slash()?)
 - start compiling with std.process
 - add argument to create a cmake or meson project for publishing
-REM: to push `git add .` `git commit -m <commit name>` `git push origin main`
+
+REM:
+- to push `git add .` `git commit -m <commit name>` `git push origin main`

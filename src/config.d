@@ -1,12 +1,27 @@
 module config;
 
-import std.range.primitives;
-import std.traits;
-import std.stdio;
-import std.file;
 import dyaml;
 import utils;
 import args;
+
+// Converts Nodes "n" SubNode "str" to type "T"
+// ONLY if it is an array and its not a string
+T node_to_val(T)(Node n,string str)
+if (isArray!T && !(isSomeString!T)) {
+    T arr;
+    alias Elem = ElementType!T;
+    foreach(Elem child;n[str]){
+        arr ~= child;
+    }
+    return arr;
+}
+
+// Converts Nodes "n" SubNode "str" to type "T"
+// ONLY if it is not an array or its a string
+T node_to_val(T)(Node n,string str)
+if (!(isArray!T) || (isSomeString!T)) {
+    return n[str].as!T;
+}
 
 struct Config_Parsed{
     bool     create_vscode_settings;
@@ -30,21 +45,6 @@ struct Config_Parsed{
     string[] run_args;
     string[] exec_postbuild;
     string[] exec_prebuild;
-}
-
-T node_to_val(T)(Node n,string str)
-if (isArray!T && !(isSomeString!T)) {
-    T arr;
-    alias Elem = ElementType!T;
-    foreach(Elem child;n[str]){
-        arr ~= child;
-    }
-    return arr;
-}
-
-T node_to_val(T)(Node n,string str)
-if (!(isArray!T) || (isSomeString!T)) {
-    return n[str].as!T;
 }
 
 Config_Parsed parse_config(string path){
