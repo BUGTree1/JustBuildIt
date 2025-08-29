@@ -52,11 +52,11 @@ Args_info parse_args(string[] args){
         .parse(args,helpConfig);
 
 
-    info.project_dir = prog.arg("project_dir");
+    info.project_dir = slash(prog.arg("project_dir"));
 
     info.template_name = prog.option("template");
-    info.init_remote_url = prog.option("init_remote_url");
-    info.push_commit_name = prog.option("push_commit_name");
+    info.init_remote_url = prog.option("init");
+    info.push_commit_name = prog.option("push");
 
     info.clean = prog.hasFlag("clean");
     info.rebuild = prog.hasFlag("rebuild");
@@ -65,14 +65,65 @@ Args_info parse_args(string[] args){
     return info;
 }
 
+bool confirm_option(){
+    writeln("you sure? (yes or no):");
+    string input = readln();
+    return toLower(input).startsWith("yes") == true;
+}
+
 void run_flags(Args_info info){
-    writefln("\n\nINFO: %s \n\n",info);
-    
-    // TODO: 
-    // - clean
-    // - rebuild 
-    // - pull
-    // - discard
-    // - init
-    // - push
+    if(info.clean){
+        string bin_dir = slash(info.project_dir,"bin");
+        writefln("CLEANING: %s (will remove %s)",info.project_dir,bin_dir);
+        if(confirm_option()){
+            writefln("REMOVING: %s",bin_dir);
+            rmdirRecurse(bin_dir);
+        }
+        exit(0);
+    }
+
+    if(info.init_remote_url != ""){
+        writefln("Initializing GIT repository with remote: %s",info.init_remote_url);
+        util_exec("git", ["-i"],                                            info.project_dir);
+        util_exec("git", ["remote","set-url","origin",info.init_remote_url],info.project_dir);
+        exit(0);
+    }
+
+    if(info.push_commit_name != ""){
+        writefln("Pushing commit with name %s to GIT repo",info.push_commit_name);
+        util_exec("git", ["commit","-m",info.push_commit_name],info.project_dir);
+        util_exec("git", ["push","origin","main"],             info.project_dir);
+        exit(0);
+    }
+
+    if(info.pull){
+        writeln("Pulling all changes from GIT remote");
+        util_exec("git", ["pull"],info.project_dir);
+        exit(0);
+    }
+
+    if(info.discard){
+        writeln("Discarding all changes and pulling from GIT remote");
+        if(confirm_option()){
+            util_exec("git", ["fetch","origin"],                   info.project_dir);
+            util_exec("git", ["reset","--hard" ,"origin/master"]  ,info.project_dir);
+        }
+        exit(0);
+    }
+
+    if(info.template_name != ""){
+        string template_dir = slash(info.templates_dir,info.template_name);
+        writefln("Copying template %s from %s",info.template_name,template_dir);
+        writefln("to %s",info.project_dir);
+
+        mkdirRecurse(info.project_dir);
+        foreach (string template_file; dirEntries(template_dir, SpanMode.depth)) {
+            if (isFile(template_file)){
+                //TODO: copies all files to one diectory ignoring template subdirs
+                std.file.copy(template_file,slash(info.project_dir,template_file.baseName));
+            }
+        }
+
+        exit(0);
+    }
 }

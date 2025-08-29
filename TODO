@@ -1,11 +1,13 @@
-DONE:
-- std.process and paths WORKS with unicode characters
-
 TODO:
+- REWRITE in java (jpackage) or go or smth
+- implement whole config from readme
 - implement all arguments from readme
-- add path normalizing to all config paths to make them absolute (slash()?)
-- start compiling with std.process
+- add path normalizing to all config paths to make them absolute
+- start compiling
+- add $() commands in all config variables
 - add argument to create a cmake or meson project for publishing
+- multithreading
+- progressbar
 
 REM:
 - to push `git add .` `git commit -m <commit name>` `git push origin main`

@@ -10,9 +10,9 @@ version(Windows){
 
 int main(string[] args){
     Args_info args_info = parse_args(args);
+    run_flags(args_info);
 
-    string config_path = slash(args_info.project_path , "buildme.yaml");
+    //string config_path = slash(args_info.project_dir , "buildme.yaml");
     //Config_Parsed cfg = parse_config(config_path);
-    //writeln(cfg);
     return 0;
 }
