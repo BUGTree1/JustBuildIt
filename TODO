@@ -1,5 +1,5 @@
 TODO:
-- REWRITE in java (jpackage) or go or smth
+- REWRITE in java (jpackage) or go or python (it has multithreading) or smth
 - implement whole config from readme
 - implement all arguments from readme
 - add path normalizing to all config paths to make them absolute
