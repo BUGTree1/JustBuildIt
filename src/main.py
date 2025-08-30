@@ -1,3 +1,9 @@
-import second
+import config_parser
+from pathlib import Path
 
-second.pozdro()
+def main():
+    config = config_parser.parse(Path('project_templates') / 'cpp')
+    print(config)
+    
+if __name__ == "__main__":
+    main()

@@ -7,25 +7,23 @@
 
 # Just Build It
 
-Is a simple [D](https://dlang.org) build system for C/C++ that:
+Is a simple Python build system for C/C++ that:
 - Is designed for windows MinGW and Linux (But can adapt to many other toolchains)
 - Works on projects written in YAML
 - Can build a project without any arguments in one command
 - Helps with maintaining git repositories
 - All its config options can contain bash like commands (e.g. "$(echo Hello)") so you can have any other program "print" values as for example the compiler arguments
 
-# Included Libraries
+# Dependencies
 
-[D:Yaml by dlang-community](https://github.com/dlang-community/D-YAML)
-
-[commandr by robik](https://github.com/robik/commandr)
+[PyYAML](https://pypi.org/project/PyYAML/)
 
 # Usage
 
 ```
 Usage: buildit [options] [project_path]
 
-Simple D build system for C/C++
+Simple build system for C/C++
 
 positional arguments:
   project_path                  path to the project (if not specified will use current working directory)
@@ -43,12 +41,12 @@ options:
 Available default templates are: cpp
 ```
 
-PS. Generating Templates is just coping a template project (directory) from `./cpp_project_templates/<template name>` to the project directory
+PS. Generating Templates is just coping a template project (directory) from `./project_templates/<template name>` to the project directory
 
 ## Quick Start
 
 ```console
-$ make
+$ make build
 $ buildit -t cpp test
 ```
 
