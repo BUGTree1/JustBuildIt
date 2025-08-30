@@ -7,25 +7,22 @@ else
   OBJ_EXT := .o
 endif
 
+SRC_EXT := .go
+
 SRC_DIR := src
 OUT_DIR := bin
-OBJ_DIR := obj
 OUT_FILE := buildit$(EXE_EXT)
 
-DC := ldc2
-DFLAGS := -O -I$(SRC_DIR) -I$(SRC_DIR)/libs
+COMPILER := go build
+FLAGS := 
 
-SRC_FILES := $(call rwildcard,$(SRC_DIR),*.d)
-OBJ_FILES := $(patsubst $(SRC_DIR)/%.d,$(OUT_DIR)/$(OBJ_DIR)/%$(OBJ_EXT),$(SRC_FILES))
+SRC_FILES := $(call rwildcard,$(SRC_DIR),*$(SRC_EXT))
 
 .PHONY: test
 test: $(OUT_DIR)/$(OUT_FILE)
 	$(OUT_DIR)/$(OUT_FILE)
-	$(OUT_DIR)/$(OUT_FILE) -h
-	$(OUT_DIR)/$(OUT_FILE) -t cpp test
+#	$(OUT_DIR)/$(OUT_FILE) -h
+#	$(OUT_DIR)/$(OUT_FILE) -t cpp test
 
-$(OUT_DIR)/$(OUT_FILE): $(OBJ_FILES)
-	$(DC) $^ -of="$@"
-
-$(OUT_DIR)/$(OBJ_DIR)/%$(OBJ_EXT): $(SRC_DIR)/%.d
-	$(DC) -c $< -of="$@" $(DFLAGS)
+$(OUT_DIR)/$(OUT_FILE): $(SRC_FILES)
+	$(COMPILER) -o $@ $(FLAGS) $^
