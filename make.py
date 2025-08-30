@@ -32,8 +32,8 @@ def build():
     clean()
 
 def test():
-    build()
-    subprocess.run(['python','buildit','-t','cpp','test'],cwd=Path.cwd())
+    subprocess.run(['python','src/main.py'],cwd=Path.cwd())
+    #subprocess.run(['python','src/main.py','-t','cpp','test'],cwd=Path.cwd())
  
 parser = argparse.ArgumentParser(prog='make',description='makes',epilog='')
 parser.add_argument('command')
