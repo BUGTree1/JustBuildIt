@@ -10,12 +10,12 @@ linker                 : "g++"
 flags                  : ['-Wall','-Wextra','-O3']
 compiler_flags         : []
 linker_flags           : []
-output_path            : "bin"
-source_path            : "src"
+output_dir             : "bin"
+source_dir             : "src"
 libs                   : []
 pkgconf_libs           : []
-lib_paths              : []
-include_paths          : []
+lib_dirs               : []
+include_dirs           : []
 run_args               : []
 
 exec_postbuild         : []

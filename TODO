@@ -3,10 +3,10 @@ DONE:
 - implement whole config from readme
 - add subconfigs for platforms (windows, posix, linux, else)
 - implement all arguments from readme
+- start compiling
 
 TODO:
-- add path normalizing to all config paths to make them absolute
-- start compiling
+- add printing of which file is compiling
 - add $() commands in all config variables
 - add argument to create a cmake or meson project for publishing
 - multithreading

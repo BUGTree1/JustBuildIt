@@ -54,9 +54,11 @@ $ buildit -t cpp test
 ```
 create_vscode_settings : True                      # Create vscode workspace settings based on eg. include paths
 run_after_build        : True                      # Run the executable after succesful build
+auto_out_file_ext      : true                      # Add the correct file exension to the build files
+build_type             : "executable"              # Build type can be: executable, static (library), dynamic (library)
 proj_name              : "test"                    # Project name
 proj_version           : "0.1.0.0"                 # Project version
-file_name              : "test"                    # Output executable name (on windows .exe is autmatically added)
+file_name              : "test"                    # Output executable name (on windows .exe is autmatically added with auto_out_file_ext)
 compiler               : "g++"                     # Compiler for c and c++ (you can add c_compiler or cxx_compiler for different compilers)
 linker                 : "g++"                     # Linker for linking all object files
 flags                  : ['-Wall','-Wextra','-O3'] # Flags for linker and compiler (you can specifiy compiler_flags and linker_flags)
