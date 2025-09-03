@@ -1,8 +1,10 @@
-TODO:
+DONE:
 - REWRITE in java (jpackage) or go or python (it has multithreading) or smth
 - implement whole config from readme
 - add subconfigs for platforms (windows, posix, linux, else)
 - implement all arguments from readme
+
+TODO:
 - add path normalizing to all config paths to make them absolute
 - start compiling
 - add $() commands in all config variables

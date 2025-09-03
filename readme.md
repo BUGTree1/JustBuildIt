@@ -31,7 +31,6 @@ positional arguments:
 options:
   -h, --help                    show this help message and exit
   -t, --template TEMPLATE_NAME  generate template
-  -c, --clean                   clean any build files
   -r, --rebuild                 rebuild whole project
   -i, --init REMOTE_URL         init a git repo with remote
   -s, --push COMMIT_NAME        (-s - save) push to remote repo with commit name

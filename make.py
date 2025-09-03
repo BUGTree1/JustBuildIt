@@ -4,6 +4,11 @@ import argparse
 import shutil
 import os
 
+def run(cmd,cwd = None):
+    print('$ ',end='')
+    print(cmd)
+    subprocess.run(cmd,cwd=cwd)
+
 def clean():
 	shutil.rmtree(Path.cwd() / 'dist',ignore_errors=True)
 	shutil.rmtree(Path.cwd() / 'build',ignore_errors=True)
@@ -16,7 +21,7 @@ def build():
         if src_file.suffix == '.py':
             src_files.append(src_file)
     
-    subprocess.run(['pyinstaller','-n','buildit','--noconfirm','--console','--onefile','--optimize','2',*src_files],cwd=Path.cwd())
+    run(['pyinstaller','-n','buildit','--noconfirm','--console','--onefile','--optimize','2',*src_files],cwd=Path.cwd())
     
     if not (Path.cwd() / 'bin').exists():
         (Path.cwd() / 'bin').mkdir()
@@ -32,8 +37,9 @@ def build():
     clean()
 
 def test():
-    subprocess.run(['python','src/main.py'],cwd=Path.cwd())
-    #subprocess.run(['python','src/main.py','-t','cpp','test'],cwd=Path.cwd())
+    run(['python','src/main.py'],cwd=Path.cwd())
+    run(['python','src/main.py','-h'],cwd=Path.cwd())
+    run(['python','src/main.py','-t','cpp','test'],cwd=Path.cwd())
  
 parser = argparse.ArgumentParser(prog='make',description='makes',epilog='')
 parser.add_argument('command')
