@@ -73,40 +73,30 @@ def build(config : dict, args : dict):
             last_build_time = (whole_out_dir / whole_filename).stat().st_mtime
     else:
         whole_out_dir.mkdir()
+        
+    if not whole_obj_dir.exists():
+        whole_obj_dir.mkdir()
     
-    all_c_files = []
-    all_c_files_to_compile = []
-    all_cpp_files = []
-    all_cpp_files_to_compile = []
-    all_obj_files = []
+    all_src_files_to_compile: list[tuple[Path, Path, str]] = []
+    all_obj_files: list[Path] = []
     for dir_path, dir_names, src_files in whole_src_dir.walk():
         for src_file in src_files:
-            whole_src_file = (dir_path / Path(src_file)).resolve()
-            if whole_src_file.suffix == '.c':
+            whole_src_file: Path = (dir_path / Path(src_file)).resolve()
+            whole_obj_file: Path = (whole_obj_dir / whole_src_file.relative_to(whole_src_dir)).resolve().with_suffix('.o')
+            if whole_src_file.suffix == '.c' or whole_src_file.suffix == '.cpp':
                 if whole_src_file.stat().st_mtime > last_build_time:
-                    all_c_files_to_compile.append((whole_src_file, whole_src_file.with_suffix('.o')))
-                all_c_files.append(whole_src_file)
-                all_obj_files.append(whole_src_file.with_suffix('.o'))
-            if whole_src_file.suffix == '.cpp':
-                if whole_src_file.stat().st_mtime > last_build_time:
-                    all_cpp_files_to_compile.append((whole_src_file, whole_src_file.with_suffix('.o')))
-                all_cpp_files.append(whole_src_file)
-                all_obj_files.append(whole_src_file.with_suffix('.o'))
+                    all_src_files_to_compile.append((whole_src_file, whole_obj_file, whole_src_file.suffix))
+                all_obj_files.append(whole_obj_file)
     
     needs_linking = False
     errors        = False
-    for cpp_file, obj_file in all_cpp_files_to_compile:
-        cmd = [cxx_compiler, utils.compiler_compile_only_flag, cpp_file, utils.compiler_output_name_flag, whole_obj_dir / obj_file, *config['compiler_flags'], *config['flags']]
-        for include_dir in config['include_dirs']:
-            cmd.append(utils.compiler_include_dir_flag)
-            cmd.append(include_dir)
-        if utils.run(cmd, project_dir) != 0:
-            errors = True
+    for src_file, obj_file, file_suffix in all_src_files_to_compile:
+        if file_suffix == '.cpp':
+            file_compiler = cxx_compiler
         else:
-            needs_linking = True
-    
-    for c_file, obj_file in all_c_files_to_compile:
-        cmd = [c_compiler, utils.compiler_compile_only_flag, c_file, utils.compiler_output_name_flag, whole_obj_dir / obj_file, *config['compiler_flags'], *config['flags']]
+            file_compiler = c_compiler
+        
+        cmd: list[str] = [file_compiler, utils.compiler_compile_only_flag, str(src_file), utils.compiler_output_name_flag, str(obj_file), *config['compiler_flags'], *config['flags']]
         for include_dir in config['include_dirs']:
             cmd.append(utils.compiler_include_dir_flag)
             cmd.append(include_dir)
@@ -117,9 +107,9 @@ def build(config : dict, args : dict):
     
     if needs_linking:
         if config['build_type'] == 'static':
-            utils.run(['ar','rcs', str(whole_out_dir / whole_filename), *all_obj_files],project_dir)
+            utils.run(['ar','rcs', str(whole_out_dir / whole_filename)] + list(map(str,all_obj_files)),project_dir)
         else:
-            cmd = [linker, *all_obj_files, utils.compiler_output_name_flag, str(whole_out_dir / whole_filename), *config['flags'], *config['linker_flags']]
+            cmd: list[str] = [linker, utils.compiler_output_name_flag, str(whole_out_dir / whole_filename), *config['flags'], *config['linker_flags']] + list(map(str,all_obj_files))
             for lib_dir in config['lib_dirs']:
                 cmd.append(utils.compiler_library_dir_flag)
                 cmd.append(lib_dir)
