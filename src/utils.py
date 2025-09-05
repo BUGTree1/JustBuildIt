@@ -3,6 +3,7 @@ from pathlib import Path
 import subprocess
 import platform
 import shutil
+import shlex
 import sys
 import os
 
@@ -27,11 +28,19 @@ def run_capture(cmd : list[str], cwd : Path = Path.cwd()) -> str:
         error(f'Command: {cmd} exited with code {process.returncode}! and outputted {process.stdout}')
     return process.stdout
 
-def run_shell(cmd : list[str], cwd : Path = Path.cwd()) -> int:
+def to_shell_string(cmd : list[str]) -> str:
+    shell_string: str = ''
+    for i, arg in enumerate(cmd):
+        shell_string += shlex.quote(arg)
+        if i < len(cmd) - 1:
+            shell_string += ' '
+    return shell_string
+
+def run_shell(cmd : str, cwd : Path = Path.cwd()) -> int:
     print(f'$ {cmd}')
     return subprocess.run(cmd,cwd=cwd,shell=True).returncode
 
-def run_capture_shell(cmd : list[str], cwd : Path = Path.cwd()) -> str:
+def run_capture_shell(cmd : str, cwd : Path = Path.cwd()) -> str:
     print(f'$ {cmd}')
     process = subprocess.run(cmd,cwd=cwd, capture_output=True, text=True ,shell=True)
     if process.returncode != 0:

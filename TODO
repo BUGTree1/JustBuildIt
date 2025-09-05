@@ -7,7 +7,6 @@ DONE:
 
 TODO:
 - add printing of which file is compiling
-- add $() commands in all config variables
 - add argument to create a cmake or meson project for publishing
 - multithreading
 - progressbar

@@ -100,7 +100,7 @@ def build(config : dict, args : dict):
         for include_dir in config['include_dirs']:
             cmd.append(utils.compiler_include_dir_flag)
             cmd.append(include_dir)
-        if utils.run(cmd, project_dir) != 0:
+        if utils.run_shell(utils.to_shell_string(cmd), project_dir) != 0:
             errors = True
         else:
             needs_linking = True
@@ -116,11 +116,11 @@ def build(config : dict, args : dict):
             for lib in config['libs']:
                 cmd.append(utils.compiler_library_flag)
                 cmd.append(lib)
-            if utils.run(cmd, project_dir) != 0:
+            if utils.run_shell(utils.to_shell_string(cmd), project_dir) != 0:
                 errors = True
             
     if config['run_after_build'] and (not errors) and output_runnable:
-        utils.run([str(whole_out_dir / whole_filename), *config['run_args']], whole_out_dir)
+        utils.run_shell(utils.to_shell_string([str(whole_out_dir / whole_filename), *config['run_args']]), whole_out_dir)
     
     for exec_post in config['exec_postbuild']:
         utils.run_shell(exec_post, project_dir)
