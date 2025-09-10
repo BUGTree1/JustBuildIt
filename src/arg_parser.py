@@ -25,26 +25,26 @@ def parse() -> dict:
         dest = compile_args['project_dir']
         print('Copying template from: ' + str(src))
         print('To: ' + str(dest))
-        utils.copy_tree(src,dest)
+        utils.copy(src,dest)
     
     if parsed_args.rebuild:
         compile_args['rebuild'] = True
     
     if parsed_args.init != None:
-        utils.run(['git','init','-b','main']                       , compile_args['project_dir'])
-        utils.run(['git','remote','add','origin', parsed_args.init], compile_args['project_dir'])
+        utils.run(['git','init','-b','main']                       , False, False, compile_args['project_dir'])
+        utils.run(['git','remote','add','origin', parsed_args.init], False, False, compile_args['project_dir'])
         utils.exit()
     if parsed_args.push != None:
-        utils.run(['git','add','.']                     , compile_args['project_dir'])
-        utils.run(['git','commit','-m',parsed_args.push], compile_args['project_dir'])
-        utils.run(['git','push','origin','main']        , compile_args['project_dir'])
+        utils.run(['git','add','.']                     , False, False, compile_args['project_dir'])
+        utils.run(['git','commit','-m',parsed_args.push], False, False, compile_args['project_dir'])
+        utils.run(['git','push','origin','main']        , False, False, compile_args['project_dir'])
         utils.exit()
     if parsed_args.pull:
-        utils.run(['git','pull','origin','main'], compile_args['project_dir'])
+        utils.run(['git','pull','origin','main'], False, False, compile_args['project_dir'])
         utils.exit()
     if parsed_args.discard:
-        utils.run(['git','reset','--hard']      , compile_args['project_dir'])
-        utils.run(['git','pull','origin','main'], compile_args['project_dir'])
+        utils.run(['git','reset','--hard']      , False, False, compile_args['project_dir'])
+        utils.run(['git','pull','origin','main'], False, False, compile_args['project_dir'])
         utils.exit()
         
     return compile_args

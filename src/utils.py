@@ -6,6 +6,7 @@ import shutil
 import shlex
 import sys
 import os
+import re
 
 def exit(code: int = 0) -> NoReturn:
     sys.exit(code)
@@ -17,38 +18,56 @@ def error(desc: str, code: int = 1) -> NoReturn:
 def warning(desc: str) -> None:
     print(f'WARNING: {desc}')
 
-def run(cmd : list[str], cwd : Path = Path.cwd()) -> int:
-    print(f'$ {cmd}')
-    return subprocess.run(cmd,cwd=cwd).returncode
-
-def run_capture(cmd : list[str], cwd : Path = Path.cwd()) -> str:
-    print(f'$ {cmd}')
-    process = subprocess.run(cmd,cwd=cwd, capture_output=True, text=True)
-    if process.returncode != 0:
-        error(f'Command: {cmd} exited with code {process.returncode}! and outputted {process.stdout}')
-    return process.stdout
+def escape_shell_string_if_needed(str : str) -> str:
+    escape = False
+    for ch in str:
+        if ch.isspace():
+            escape = True
+    if escape:
+        str = '"' + str + '"'
+    return str
 
 def to_shell_string(cmd : list[str]) -> str:
     shell_string: str = ''
     for i, arg in enumerate(cmd):
-        shell_string += shlex.quote(arg)
+        shell_string += escape_shell_string_if_needed(arg)
         if i < len(cmd) - 1:
             shell_string += ' '
     return shell_string
 
-def run_shell(cmd : str, cwd : Path = Path.cwd()) -> int:
-    print(f'$ {cmd}')
-    return subprocess.run(cmd,cwd=cwd,shell=True).returncode
-
-def run_capture_shell(cmd : str, cwd : Path = Path.cwd()) -> str:
-    print(f'$ {cmd}')
-    process = subprocess.run(cmd,cwd=cwd, capture_output=True, text=True ,shell=True)
-    if process.returncode != 0:
-        error(f'Command: {cmd} exited with code {process.returncode}! and outputted {process.stdout}')
-    return process.stdout
+def run(cmd : str | list[str], capture : bool = False, shell : bool = False, cwd : Path = Path.cwd()) -> int | str:
+    if shell and (type(cmd) is list):
+        final_cmd = to_shell_string(cmd)
+    else:
+        final_cmd = cmd
+        
+    if shell:
+        print(f'$ {final_cmd}')
+        
+    output = subprocess.run(final_cmd, cwd=cwd, capture_output=capture, text=capture, shell=shell)
     
-def copy_tree(src : Path, dest : Path, exist_ok : bool = True) -> None:
+    if capture:
+        return output.stdout
+    else:
+        return output.returncode
+    
+def copy_dir(src : Path, dest : Path, exist_ok : bool = True) -> None:
     shutil.copytree(src, dest, dirs_exist_ok=exist_ok)
+    
+def copy_file(src : Path, dest : Path, exist_ok : bool = True) -> None:
+    if not exist_ok:
+        if dest.exists():
+            error(f"File {dest} already exists!")
+    shutil.copy(src, dest)
+    
+def copy(src : Path, dest : Path, exist_ok : bool = True) -> None:
+    if src.is_file():
+        copy_file(src, dest, exist_ok)
+    else:
+        copy_dir(src, dest, exist_ok)
+        
+def mkdir(path : Path, parents : bool = True, exist_ok : bool = True) -> None:
+    path.mkdir(parents=parents, exist_ok=exist_ok)
     
 def list_subdirs(path : Path) -> list[str]:
     return os.listdir(path)
@@ -62,6 +81,13 @@ os_str     : str  = platform.system()
 os_posix   : bool = not ('windows' in os_str.lower())
 os_windows : bool = ('windows' in os_str.lower())
 os_linux   : bool = ('linux' in os_str.lower())
+
+arch_str   : str = platform.architecture()[0]
+arch_match       = re.match(r'(.*)bit', arch_str, re.IGNORECASE)
+if arch_match:
+    arch_str = 'x' + arch_match.group(1)
+
+os_triplet : str  = os_str.lower() + '-' + arch_str.lower()
 
 if getattr(sys, 'frozen', False):
     buildit_dir : Path = Path(os.path.dirname(sys.executable))

@@ -6,25 +6,31 @@ def build(config : dict, args : dict):
     
     if utils.pkgconf_available:
         for pkgconf_lib in config['pkgconf_libs']:
-            pkgconf_out = utils.run_capture([utils.pkgconf_path, '--libs', '--cflags' ,pkgconf_lib], project_dir)
-            pkgconf_parsed = utils.parse_pkgconf(pkgconf_out)
+            pkgconf_out = utils.run([utils.pkgconf_path, '--libs', '--cflags' ,pkgconf_lib], True, True, project_dir)
+            pkgconf_parsed = utils.parse_pkgconf(pkgconf_out) # type: ignore
             config['libs']         += pkgconf_parsed['libs']
             config['lib_paths']     += pkgconf_parsed['lib_dirs']
             config['include_paths'] += pkgconf_parsed['include_dirs']
             config['flags']        += pkgconf_parsed['flags']
             
     for exec_pre in config['exec_prebuild']:
-        utils.run_shell(exec_pre, project_dir)
+        utils.run(exec_pre, False, True, project_dir)
         
     if Path(config['output_dir']).is_absolute():
         whole_out_dir: Path  = Path(config['output_dir'])
     else:
-        whole_out_dir: Path = (project_dir / Path(config['output_dir'])).resolve()
+        whole_out_dir: Path = (project_dir / Path(config['output_dir'] / Path(utils.os_triplet))).resolve()
+        
+    if not whole_out_dir.exists():
+        utils.mkdir(whole_out_dir)
         
     if Path(config['object_dir']).is_absolute():
         whole_obj_dir: Path  = Path(config['object_dir'])
     else:
         whole_obj_dir: Path = (whole_out_dir / Path(config['object_dir'])).resolve()
+        
+    if not whole_obj_dir.exists():
+        utils.mkdir(whole_obj_dir)
         
     if Path(config['source_dir']).is_absolute(): 
         whole_src_dir: Path  = Path(config['source_dir'])
@@ -68,14 +74,8 @@ def build(config : dict, args : dict):
             linker = c_compiler
     
     last_build_time = 0
-    if whole_out_dir.exists():
-        if (whole_out_dir / whole_filename).exists():
-            last_build_time = (whole_out_dir / whole_filename).stat().st_mtime
-    else:
-        whole_out_dir.mkdir()
-        
-    if not whole_obj_dir.exists():
-        whole_obj_dir.mkdir()
+    if (whole_out_dir / whole_filename).exists():
+        last_build_time = (whole_out_dir / whole_filename).stat().st_mtime
     
     all_src_files_to_compile: list[tuple[Path, Path, str]] = []
     all_obj_files: list[Path] = []
@@ -100,14 +100,14 @@ def build(config : dict, args : dict):
         for include_dir in config['include_dirs']:
             cmd.append(utils.compiler_include_dir_flag)
             cmd.append(include_dir)
-        if utils.run_shell(utils.to_shell_string(cmd), project_dir) != 0:
+        if utils.run(cmd, False, True, project_dir) != 0:
             errors = True
         else:
             needs_linking = True
     
     if needs_linking:
         if config['build_type'] == 'static':
-            utils.run(['ar','rcs', str(whole_out_dir / whole_filename)] + list(map(str,all_obj_files)),project_dir)
+            utils.run(['ar','rcs', str(whole_out_dir / whole_filename)] + list(map(str,all_obj_files)), False, True, project_dir)
         else:
             cmd: list[str] = [linker, utils.compiler_output_name_flag, str(whole_out_dir / whole_filename), *config['flags'], *config['linker_flags']] + list(map(str,all_obj_files))
             for lib_dir in config['lib_dirs']:
@@ -116,12 +116,12 @@ def build(config : dict, args : dict):
             for lib in config['libs']:
                 cmd.append(utils.compiler_library_flag)
                 cmd.append(lib)
-            if utils.run_shell(utils.to_shell_string(cmd), project_dir) != 0:
+            if utils.run(cmd, False, True, project_dir) != 0:
                 errors = True
             
     if config['run_after_build'] and (not errors) and output_runnable:
-        utils.run_shell(utils.to_shell_string([str(whole_out_dir / whole_filename), *config['run_args']]), whole_out_dir)
+        utils.run([str(whole_out_dir / whole_filename), *config['run_args']], False, True, whole_out_dir)
     
     for exec_post in config['exec_postbuild']:
-        utils.run_shell(exec_post, project_dir)
+        utils.run(exec_post, False, True, project_dir)
         

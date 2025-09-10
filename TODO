@@ -7,9 +7,9 @@ DONE:
 
 TODO:
 - add printing of which file is compiling
-- add argument to create a cmake or meson project for publishing
-- multithreading
 - progressbar
+- multithreading
+- add argument to create a cmake or meson project for publishing
 
 REM:
 - to push `git add .` `git commit -m <commit name>` `git push origin main`

@@ -37,6 +37,8 @@ def build():
     clean()
 
 def test():
+    if (Path.cwd() / 'test').exists():
+        shutil.rmtree(Path.cwd() / 'test',ignore_errors=True)
     run(['python','src/main.py'],cwd=Path.cwd())
     run(['python','src/main.py','-h'],cwd=Path.cwd())
     run(['python','src/main.py','-t','cpp','test'],cwd=Path.cwd())
