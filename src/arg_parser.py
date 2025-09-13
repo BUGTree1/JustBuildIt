@@ -5,7 +5,8 @@ import utils
 def parse() -> dict:
     templates_string : str = utils.string_subdirs(utils.templates_dir)
     
-    parser : argparse.ArgumentParser = argparse.ArgumentParser(prog='JustBuildIt', description='Simple build system for C/C++', epilog='Available default templates are: ' + templates_string)
+    formatter = lambda prog: argparse.HelpFormatter(prog,max_help_position=52)
+    parser : argparse.ArgumentParser = argparse.ArgumentParser(formatter_class=formatter, prog='JustBuildIt', description='Simple build system for C/C++', epilog='Available default templates are: ' + templates_string)
     
     parser.format_help
     parser.add_argument('-t','--template', help='generate template', metavar='<template_name>')

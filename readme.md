@@ -21,21 +21,21 @@ Is a simple Python build system for C/C++ that:
 # Usage
 
 ```
-Usage: buildit [options] [project_path]
+JustBuildIt [-h] [-t <template_name>] [-r] [-i <remote_url>] [-s <commit_name>] [-l] [-d] [project_dir]
 
 Simple build system for C/C++
 
 positional arguments:
-  project_path                  path to the project (if not specified will use current working directory)
+  project_dir                     Path to the project
 
 options:
-  -h, --help                    show this help message and exit
-  -t, --template TEMPLATE_NAME  generate template
-  -r, --rebuild                 rebuild whole project
-  -i, --init REMOTE_URL         init a git repo with remote
-  -s, --push COMMIT_NAME        (-s - save) push to remote repo with commit name
-  -l, --pull                    (-l - load) pull lastest changes from remote repo
-  -d, --discard                 discard local changes and reset to remote repo
+  -h, --help                      show this help message and exit
+  -t, --template <template_name>  generate template
+  -r, --rebuild                   rebuild whole project
+  -i, --init <remote_url>         init a git repo with remote
+  -s, --push <commit_name>        (-s - save) push to remote repo with commit name
+  -l, --pull                      (-l - load) pull lastest changes from remote repo
+  -d, --discard                   discard local changes and reset to remote repo
 
 Available default templates are: c, cpp
 ```
