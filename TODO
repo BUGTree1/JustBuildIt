@@ -7,6 +7,6 @@ DONE:
 
 TODO:
 - add printing of which file is compiling
-- progressbar
+- progressbar (spinning wheel when running)
 - multithreading
 - add argument to create a cmake or meson project for publishing
