@@ -41,7 +41,7 @@ def test():
         shutil.rmtree(Path.cwd() / 'test',ignore_errors=True)
     run(['python','src/main.py'],cwd=Path.cwd())
     run(['python','src/main.py','-h'],cwd=Path.cwd())
-    run(['python','src/main.py','-t','cpp','test'],cwd=Path.cwd())
+    run(['python','src/main.py','-t','c','test'],cwd=Path.cwd())
  
 parser = argparse.ArgumentParser(prog='make',description='makes',epilog='')
 parser.add_argument('command')

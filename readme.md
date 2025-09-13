@@ -37,7 +37,7 @@ options:
   -l, --pull                    (-l - load) pull lastest changes from remote repo
   -d, --discard                 discard local changes and reset to remote repo
 
-Available default templates are: cpp
+Available default templates are: c, cpp
 ```
 
 PS. Generating Templates is just coping a template project (directory) from `./project_templates/<template name>` to the project directory
