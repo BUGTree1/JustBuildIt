@@ -4,9 +4,9 @@ DONE:
 - add subconfigs for platforms (windows, posix, linux, else)
 - implement all arguments from readme
 - start compiling
+- add printing of which file is compiling
 
 TODO:
-- add printing of which file is compiling
-- progressbar (spinning wheel when running)
 - multithreading
+- progressbar (spinning wheel when running)
 - add argument to create a cmake or meson project for publishing

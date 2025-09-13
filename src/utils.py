@@ -41,8 +41,8 @@ def run(cmd : str | list[str], capture : bool = False, shell : bool = False, cwd
     else:
         final_cmd = cmd
         
-    if shell:
-        print(f'$ {final_cmd}')
+    #if shell:
+    #    print(f'$ {final_cmd}')
         
     output = subprocess.run(final_cmd, cwd=cwd, capture_output=capture, text=capture, shell=shell)
     
@@ -74,13 +74,12 @@ def list_subdirs(path : Path) -> list[str]:
 
 def string_subdirs(path : Path) -> str:
     return ', '.join(list_subdirs(path))
-     
-# KINDA CONFIG
        
 os_str     : str  = platform.system()
 os_posix   : bool = not ('windows' in os_str.lower())
-os_windows : bool = ('windows' in os_str.lower())
-os_linux   : bool = ('linux' in os_str.lower())
+os_windows : bool = ('windows'     in os_str.lower())
+os_linux   : bool = ('linux'       in os_str.lower())
+os_darwin  : bool = ('darwin'      in os_str.lower())
 
 arch_str   : str = platform.architecture()[0]
 arch_match       = re.match(r'(.*)bit', arch_str, re.IGNORECASE)
@@ -88,6 +87,13 @@ if arch_match:
     arch_str = 'x' + arch_match.group(1)
 
 os_triplet : str  = os_str.lower() + '-' + arch_str.lower()
+
+if os_windows:
+    os_file_extension : dict[str,str] = {'executable':'.exe', 'static':'.a', 'dynamic':'.dll'}
+    os_file_prefix    : dict[str,str] = {'executable':'', 'static':'lib', 'dynamic':''}
+else:
+    os_file_extension : dict[str,str] = {'executable':'', 'static':'.a', 'dynamic':'.so'}
+    os_file_prefix    : dict[str,str] = {'executable':'', 'static':'lib', 'dynamic':''}
 
 if getattr(sys, 'frozen', False):
     buildit_dir : Path = Path(os.path.dirname(sys.executable))
@@ -110,12 +116,16 @@ if not shutil.which(pkgconf_path):
     warning('PKGCONF_LIBS DISABLED! Couldnt find the pkgconfig tool make sure you have installed pkgconf or pkg-config in your PATH!')
 else:
     pkgconf_available = True
+     
+# KINDA CONFIG
     
 compiler_library_flag      : str = '-l'
 compiler_library_dir_flag  : str = '-L'
 compiler_include_dir_flag  : str = '-I'
 compiler_compile_only_flag : str = '-c'
 compiler_output_name_flag  : str = '-o'
+
+linker_shared_lib_flag     : str = '-shared'
 
 # END OF CONFIG
             

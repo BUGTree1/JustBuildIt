@@ -23,8 +23,7 @@ def parse() -> dict:
     if parsed_args.template != None:
         src = utils.templates_dir / parsed_args.template
         dest = compile_args['project_dir']
-        print('Copying template from: ' + str(src))
-        print('To: ' + str(dest))
+        print(f'Copying template from: "{str(src)}" to: "{str(dest)}"')
         utils.copy(src,dest)
     
     if parsed_args.rebuild:
