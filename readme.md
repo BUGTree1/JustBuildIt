@@ -9,10 +9,11 @@
 
 Is a simple Python build system for C/C++ that:
 - Is designed for windows MinGW and Linux (But can adapt to many other toolchains)
-- Works on projects written in YAML
+- Is multithreaded
 - Can build a project without any arguments in one command
+- Can automatically create config for vscode
+- Works on projects written in YAML
 - Helps with maintaining git repositories
-- All its config options can contain bash like commands (e.g. "$(echo Hello)") so you can have any other program "print" values as for example the compiler arguments
 
 # Dependencies
 
@@ -46,28 +47,28 @@ PS. Generating Templates is just coping a template project (directory) from `./p
 
 ```console
 $ make build
-$ buildit -t cpp test
+$ buildit -t c test
 ```
 
 ### Example `buildme.yaml`
 
 ```
-create_vscode_settings : True                      # Create vscode workspace settings based on eg. include paths
-run_after_build        : True                      # Run the executable after succesful build
+create_vscode_settings : true                      # Create vscode workspace settings based on eg. include paths
+run_after_build        : true                      # Run the executable after succesful build
 auto_out_file_ext      : true                      # Add the correct file exension to the build files
 build_type             : "executable"              # Build type can be: executable, static (library), dynamic (library)
-proj_name              : "test"                    # Project name
+proj_name              : "TEMPLATE"                # Project name
 proj_version           : "0.1.0.0"                 # Project version
-file_name              : "test"                    # Output executable name (on windows .exe is autmatically added with auto_out_file_ext)
-compiler               : "g++"                     # Compiler for c and c++ (you can add c_compiler or cxx_compiler for different compilers)
-linker                 : "g++"                     # Linker for linking all object files
+file_name              : "TEMPLATE"                # Output executable name (on windows .exe is autmatically added with auto_out_file_ext)
+compiler               : "gcc"                     # Compiler for c and c++ (you can add c_compiler or cxx_compiler for different compilers)
+linker                 : "gcc"                     # Linker for linking all object files
 flags                  : ['-Wall','-Wextra','-O3'] # Flags for linker and compiler (you can specifiy compiler_flags and linker_flags)
-output_path            : "bin"                     # Directory for the executable (and all objects in subdirectory specified by obj_dir default is obj)
-source_path            : "src"                     # Directory with the source code (can be in subdirectories)
+output_dir             : "bin"                     # Directory for the executable (and all objects in subdirectory specified by obj_dir default is obj)
+source_dir             : "src"                     # Directory with the source code (can be in subdirectories)
 libs                   : []                        # List of Libraries to link with
 pkgconf_libs           : []                        # List of Libraries passed to pkgconf
-lib_paths              : []                        # List of Directories with libraries
-include_paths          : []                        # List of Directories with headers
+lib_dirs               : []                        # List of Directories with libraries
+include_dirs           : []                        # List of Directories with headers
 run_args               : []                        # Arguments to pass to the executable when run_after_build is True
 
 exec_postbuild         : []                        # List of Command lines to run after a successful build

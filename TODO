@@ -5,8 +5,8 @@ DONE:
 - implement all arguments from readme
 - start compiling
 - add printing of which file is compiling
-
-TODO:
 - multithreading
 - progressbar (spinning wheel when running)
+
+TODO:
 - add argument to create a cmake or meson project for publishing

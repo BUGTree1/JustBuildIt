@@ -84,5 +84,17 @@ def parse(project_dir : Path) -> dict:
         final_config['exec_postbuild'] = []
     if not 'exec_prebuild' in final_config:
         final_config['exec_prebuild'] = []
+        
+    if final_config['c_compiler'] == '':
+        final_config['c_compiler'] = final_config['compiler']
+        
+    if final_config['cxx_compiler'] == '':
+        final_config['cxx_compiler'] = final_config['compiler']
+       
+    if final_config['linker'] == '':
+        if final_config['cxx_compiler'] != '':
+            final_config['linker'] = final_config['cxx_compiler']
+        else:
+            final_config['linker'] = final_config['c_compiler']
             
     return final_config

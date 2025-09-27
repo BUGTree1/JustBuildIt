@@ -144,3 +144,13 @@ def parse_pkgconf(pkgconf_out : str) -> dict:
             parsed_args['flags'].append(flag)
     
     return parsed_args
+
+def run_pkgconf(config : dict, project_dir : Path) -> dict:
+    for pkgconf_lib in config['pkgconf_libs']:
+        pkgconf_out = run([pkgconf_path, '--libs', '--cflags' ,pkgconf_lib], True, True, project_dir)
+        pkgconf_parsed = parse_pkgconf(pkgconf_out) # type: ignore
+        config['libs']         += pkgconf_parsed['libs']
+        config['lib_dirs']     += pkgconf_parsed['lib_dirs']
+        config['include_dirs'] += pkgconf_parsed['include_dirs']
+        config['flags']        += pkgconf_parsed['flags']
+    return config

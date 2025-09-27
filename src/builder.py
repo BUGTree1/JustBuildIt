@@ -1,5 +1,46 @@
 from pathlib import Path
+import concurrent.futures
+import multiprocessing
+import threading
 import utils
+import time
+
+loading_wheel:        int             = 0
+loading_wheel_time:   int             = 0
+threads_count:        int             = 0
+completed_threads:    int             = 0
+threads_lock:         threading.Lock  = threading.Lock()
+compiling_stop_event: threading.Event = threading.Event()
+
+def compiling_progressbar():
+    global completed_threads
+    global threads_count
+    global threads_lock
+    global loading_wheel
+    global loading_wheel_time
+    global compiling_stop_event
+    
+    completed = 0
+    wheel_speed = 0.1
+    nanoseconds_to_seconds = 1_000_000_000
+    wheel_speed_ns = wheel_speed * nanoseconds_to_seconds
+    
+    while not compiling_stop_event.is_set():
+        with threads_lock:
+            completed = threads_count
+        
+        perc = completed / threads_count
+        perc *= 100
+        
+        
+        if time.time_ns() - loading_wheel_time > wheel_speed_ns:
+            loading_wheel_time = time.time_ns()
+            loading_wheel += 1
+        
+        wheel = loading_wheel % 4
+        wheel_char = "-\\|/"[wheel]
+        
+        print(f"Done Compiling: {completed}/{threads_count} {perc}% {wheel_char}", end='\r')
 
 def get_object_from_source(src_file: Path, src_dir: Path, obj_dir: Path) -> Path:
     return (obj_dir / src_file.relative_to(src_dir)).resolve().with_suffix('.o')
@@ -16,7 +57,8 @@ def collect_source_files(src_dir: Path, last_build_time: float) -> list[list[Pat
                 all_src_files.append(whole_src_file)
     return [all_src_files, all_src_files_to_compile]
 
-def compile_file(project_dir: Path, src_file: Path, out_file: Path, compiler: str, include_dirs: list[str], flags: list[str]) -> bool:
+# thread.get() == 0
+def compile_file(project_dir: Path, src_file: Path, out_file: Path, compiler: str, include_dirs: list[str], flags: list[str]) -> int:
     print(f'Compiling file: {src_file} ...')
     
     cmd: list[str] = [compiler, utils.compiler_compile_only_flag, str(src_file), utils.compiler_output_name_flag, str(out_file)]
@@ -25,7 +67,12 @@ def compile_file(project_dir: Path, src_file: Path, out_file: Path, compiler: st
     for include_dir in include_dirs:
         cmd.append(utils.compiler_include_dir_flag)
         cmd.append(include_dir)
-    return utils.run(cmd, False, True, project_dir) == 0
+    out_code = utils.run(cmd, False, True, project_dir)
+    
+    global completed_threads
+    with threads_lock:
+        completed_threads += 1
+    return out_code # type: ignore
        
 def link_static(project_dir: Path, src_files: list[Path], out_file: Path) -> bool:
     print(f'Linking static: {out_file} ...')
@@ -42,6 +89,7 @@ def link_dynamic(project_dir: Path, src_files: list[Path], out_file: Path, linke
     for lib in libraries:
         cmd.append(utils.compiler_library_flag)
         cmd.append(lib)
+    
     return utils.run(cmd, False, True, project_dir) == 0
         
 def link_executable(project_dir: Path, src_files: list[Path], out_file: Path, linker: str, library_dirs: list[str],libraries: list[str], flags: list[str]) -> bool:
@@ -57,21 +105,8 @@ def link_executable(project_dir: Path, src_files: list[Path], out_file: Path, li
         cmd.append(lib)
     return utils.run(cmd, False, True, project_dir) == 0
 
-def run_pkgconf(config : dict, project_dir : Path) -> dict:
-    for pkgconf_lib in config['pkgconf_libs']:
-        pkgconf_out = utils.run([utils.pkgconf_path, '--libs', '--cflags' ,pkgconf_lib], True, True, project_dir)
-        pkgconf_parsed = utils.parse_pkgconf(pkgconf_out) # type: ignore
-        config['libs']         += pkgconf_parsed['libs']
-        config['lib_dirs']     += pkgconf_parsed['lib_dirs']
-        config['include_dirs'] += pkgconf_parsed['include_dirs']
-        config['flags']        += pkgconf_parsed['flags']
-    return config
-
 def build(config : dict, args : dict):
     project_dir : Path = args['project_dir']
-    
-    if utils.pkgconf_available:
-        config = run_pkgconf(config, project_dir)
             
     for exec_pre in config['exec_prebuild']:
         utils.run(exec_pre, False, True, project_dir)
@@ -92,19 +127,8 @@ def build(config : dict, args : dict):
         whole_src_dir: Path = (project_dir / Path(config['source_dir'])).resolve()
         
     c_compiler : str = config['c_compiler']
-    if c_compiler == '':
-        c_compiler = config['compiler']
-        
     cxx_compiler : str = config['cxx_compiler']
-    if cxx_compiler == '':
-        cxx_compiler = config['compiler']
-       
-    linker : str = config['linker'] 
-    if linker == '':
-        if cxx_compiler != '':
-            linker = cxx_compiler
-        else:
-            linker = c_compiler
+    linker : str = config['linker']
         
     if not whole_out_dir.exists():
         utils.mkdir(whole_out_dir)
@@ -129,18 +153,35 @@ def build(config : dict, args : dict):
     all_src_files            : list[Path] = collected_src_files[0]
     all_src_files_to_compile : list[Path] = collected_src_files[1]
     
-    needs_linking = False
+    needs_linking = True
     errors        = False
-    for src_file in all_src_files_to_compile:
-        if src_file.suffix == '.cpp' or src_file.suffix == '.cxx' or src_file.suffix == '.c++':
-            file_compiler = cxx_compiler
-        else:
-            file_compiler = c_compiler
+    
+    global threads_count
+    threads_count = len(all_src_files_to_compile)
+    
+    bg_thread = threading.Thread(target=compiling_progressbar, daemon=True)
+    bg_thread.start()
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+        futures: list[concurrent.futures.Future] = []
+        for src_file in all_src_files_to_compile:
+            if src_file.suffix == '.cpp' or src_file.suffix == '.cxx' or src_file.suffix == '.c++':
+                file_compiler = cxx_compiler
+            else:
+                file_compiler = c_compiler
         
-        if compile_file(project_dir, src_file, whole_out_dir / get_object_from_source(src_file,whole_src_dir,whole_obj_dir), file_compiler, config['include_dirs'], config['compiler_flags'].extend(config['flags'])):
-            needs_linking = True
-        else:
-            errors = True
+            futures.append(executor.submit(compile_file,project_dir, src_file, whole_out_dir / get_object_from_source(src_file,whole_src_dir,whole_obj_dir), file_compiler, config['include_dirs'], config['compiler_flags'].extend(config['flags'])))
+        
+        concurrent.futures.wait(futures)
+    
+        for future in futures:
+            if future.result() != 0:
+                errors = True
+       
+    compiling_stop_event.set()         
+    bg_thread.join()
+            
+    needs_linking = not errors
     
     if needs_linking:
         match config['build_type']:
