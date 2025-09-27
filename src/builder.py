@@ -153,35 +153,36 @@ def build(config : dict, args : dict):
     all_src_files            : list[Path] = collected_src_files[0]
     all_src_files_to_compile : list[Path] = collected_src_files[1]
     
-    needs_linking = True
+    needs_linking = False
     errors        = False
     
-    global threads_count
-    threads_count = len(all_src_files_to_compile)
-    
-    bg_thread = threading.Thread(target=compiling_progressbar, daemon=True)
-    bg_thread.start()
-    
-    with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-        futures: list[concurrent.futures.Future] = []
-        for src_file in all_src_files_to_compile:
-            if src_file.suffix == '.cpp' or src_file.suffix == '.cxx' or src_file.suffix == '.c++':
-                file_compiler = cxx_compiler
-            else:
-                file_compiler = c_compiler
+    if len(all_src_files_to_compile) > 0:
+        global threads_count
+        threads_count = len(all_src_files_to_compile)
         
-            futures.append(executor.submit(compile_file,project_dir, src_file, whole_out_dir / get_object_from_source(src_file,whole_src_dir,whole_obj_dir), file_compiler, config['include_dirs'], config['compiler_flags'].extend(config['flags'])))
+        bg_thread = threading.Thread(target=compiling_progressbar, daemon=True)
+        bg_thread.start()
         
-        concurrent.futures.wait(futures)
-    
-        for future in futures:
-            if future.result() != 0:
-                errors = True
-       
-    compiling_stop_event.set()         
-    bg_thread.join()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
+            futures: list[concurrent.futures.Future] = []
+            for src_file in all_src_files_to_compile:
+                if src_file.suffix == '.cpp' or src_file.suffix == '.cxx' or src_file.suffix == '.c++':
+                    file_compiler = cxx_compiler
+                else:
+                    file_compiler = c_compiler
             
-    needs_linking = not errors
+                futures.append(executor.submit(compile_file,project_dir, src_file, whole_out_dir / get_object_from_source(src_file,whole_src_dir,whole_obj_dir), file_compiler, config['include_dirs'], config['compiler_flags'].extend(config['flags'])))
+            
+            concurrent.futures.wait(futures)
+        
+            for future in futures:
+                if future.result() != 0:
+                    errors = True
+        
+        compiling_stop_event.set()         
+        bg_thread.join()
+            
+        needs_linking = not errors
     
     if needs_linking:
         match config['build_type']:
