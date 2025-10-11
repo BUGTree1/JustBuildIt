@@ -152,6 +152,9 @@ def build(config : dict, args : dict):
     collected_src_files      : list[list[Path]] = collect_source_files(whole_src_dir, last_build_time)
     all_src_files            : list[Path] = collected_src_files[0]
     all_src_files_to_compile : list[Path] = collected_src_files[1]
+
+    if args['rebuild']:
+        all_src_files_to_compile = all_src_files
     
     needs_linking = False
     errors        = False
