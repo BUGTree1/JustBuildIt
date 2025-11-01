@@ -1,3 +1,4 @@
+create_clangd_config   : true
 create_vscode_settings : true
 run_after_build        : true
 auto_out_file_ext      : true

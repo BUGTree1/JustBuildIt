@@ -38,6 +38,8 @@ def parse(project_dir : Path) -> dict:
             
     if not 'create_vscode_settings' in final_config:
         final_config['create_vscode_settings'] = False
+    if not 'create_clangd_config' in final_config:
+        final_config['create_clangd_config'] = False
     if not 'run_after_build' in final_config:
         final_config['run_after_build'] = False
     if not 'auto_out_file_ext' in final_config:

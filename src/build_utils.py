@@ -9,7 +9,7 @@ def exec(args: dict, config: dict) -> None:
         
         settings_path = Path(args["project_dir"]) / '.vscode' / 'c_cpp_properties.json'
         utils.mkdir(settings_path.parent)
-        with open(settings_path,mode = 'w') as file:
+        with open(settings_path,mode = 'w+') as file:
             file.write("{\n\"configurations\": [\n{\n\"name\": \"Generic\",\n\"includePath\": [\n")
             
             file.write(', '.join(list(map(lambda dir: "\"" + str(dir).replace('\\','\\\\') + "\"", include_dirs))))
@@ -41,3 +41,13 @@ def exec(args: dict, config: dict) -> None:
                     file.write("gcc")
             file.write("-" + utils.arch_str + "\"")
             file.write("\n}]\n,\n\"version\": 4\n}")
+
+    if config["create_clangd_config"]:
+        include_dirs = config["include_dirs"]
+        include_dirs = list(map(lambda dir: "    - \"-I" + str(dir).replace('\\','\\\\') + "\"", include_dirs))
+
+        config_path = Path(args["project_dir"]) / '.clangd'
+        with open(config_path,mode = 'w+') as file:
+            file.write("CompileFlags:\n  Add:\n")
+
+            file.write('\n'.join(include_dirs))
