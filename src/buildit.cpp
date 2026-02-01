@@ -21,24 +21,8 @@ int execute_cmd(Command cmd, vector<Process>* async){
     
     #ifdef BUILDIT_OS_WINDOWS
     
-    STARTUPINFOW si;
-    PROCESS_INFORMATION pi;
-
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-    
-    // TODO: Quote args with a space and separate by space to a wstring
-    wstring command_line = ;
-    
-    // TODO: si.hStdInput  = fdin ? *fdin : GetStdHandle(STD_INPUT_HANDLE);
-    // TODO: si.hStdOutput = fdout ? *fdout : GetStdHandle(STD_OUTPUT_HANDLE);
-    // TODO: si.hStdError  = fderr ? *fderr : GetStdHandle(STD_ERROR_HANDLE);
-    // TODO: siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
-    
-    ASSERT_WINAPI(CreateProcessW(absolute_executable.c_str(), &command_line[0], NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi));
-    
-    created_process = {pi};
+    // TODO: rewrite in UCRT
+    todo("WINDOWS UCRT execute_cmd");
     
     #else // BUILDIT_OS_WINDOWS
         

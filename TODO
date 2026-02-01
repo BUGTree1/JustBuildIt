@@ -13,6 +13,7 @@ TEST UCRT with arguments with spaces and quotes
 - code todos
 - try to break (e.g. set all arguments to NULL, 0 or empty array or string)
 - Do something about warning, error, todo (Logging system but with exits like error?)
+- Add compiler and other stuff to create_clangd_settings
 
 - rebuild yourself
 - git helper
