@@ -9,17 +9,17 @@
 
 Is a simple build system for C/C++ made in C++ that:
 - Can be used from a (stb style) single header
-- Recompile itself when modified
+- Abstracts OS specific API
+- Recompiles itself when modified
 - Is crossplatform
 - Is multithreaded
-- Can build a project without any arguments in one command
-- Can automatically create config for vscode and clangd
-- Bundles and uses [subprocess.h by sheredom](https://github.com/sheredom/subprocess.h)
+- Can automatically create configs for vscode and clangd
 
 Also has a helper app that:
+- Can build a project without any arguments in one command
+- Can bootstrap the build system
 - Simplifies maintaining git repositories
 - Can copy templates (copy a folder from `<helper app path>/project_templates/<template name>`)
-- Can bootstrap the build system
 
 ## Quick Start
 
@@ -51,25 +51,5 @@ Available default templates are: c, cpp
 ## Example `buildit.cpp`
 
 ```
-create_vscode_settings : true                      # Create vscode workspace settings based on eg. include paths
-run_after_build        : true                      # Run the executable after succesful build
-auto_out_file_ext      : true                      # Add the correct file exension to the build files
-build_type             : "executable"              # Build type can be: executable, static (library), dynamic (library)
-proj_name              : "TEMPLATE"                # Project name
-proj_version           : "0.1.0.0"                 # Project version
-file_name              : "TEMPLATE"                # Output executable name (on windows .exe is autmatically added with auto_out_file_ext)
-compiler               : "gcc"                     # Compiler for c and c++ (you can add c_compiler or cxx_compiler for different compilers)
-linker                 : "gcc"                     # Linker for linking all object files
-flags                  : ['-Wall','-Wextra','-O3'] # Flags for linker and compiler (you can specifiy compiler_flags and linker_flags)
-output_dir             : "bin"                     # Directory for the executable (and all objects in subdirectory specified by obj_dir default is obj)
-source_dir             : "src"                     # Directory with the source code (can be in subdirectories)
-libs                   : []                        # List of Libraries to link with
-pkgconf_libs           : []                        # List of Libraries passed to pkgconf
-lib_dirs               : []                        # List of Directories with libraries
-include_dirs           : []                        # List of Directories with headers
-run_args               : []                        # Arguments to pass to the executable when run_after_build is True
-
-exec_postbuild         : []                        # List of Command lines to run after a successful build
-exec_prebuild          : []                        # List of Command lines to run before the build
-
+TODO:
 ```
