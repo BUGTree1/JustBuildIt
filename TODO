@@ -1,12 +1,23 @@
 DONE:
-- REWRITE in java (jpackage) or go or python (it has multithreading) or smth
-- implement whole config from readme
-- add subconfigs for platforms (windows, posix, linux, else)
-- implement all arguments from readme
-- start compiling
-- add printing of which file is compiling
-- multithreading
-- progressbar (spinning wheel when running)
+- REWRITE in OS API (posix, windows, maybe macos?)
 
 TODO:
-- add argument to create a cmake or meson project for publishing
+- WINDOWS UCRT (https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/execv-wexecv?view=msvc-170
+https://support.microsoft.com/en-us/topic/update-for-universal-c-runtime-in-windows-c0514201-7fe6-95a3-b0a5-287930f3560c)
+TEST UCRT with arguments with spaces and quotes
+- Write WinAPI bindings
+- replace stdin/out/err file strings with plain pipes in execute_cmd
+- add functions for creating and manipulating pipes
+- rewrite get_current_executable_path to support all oses (no /proc on e.g. BSD) maybe just canonize argv[0]?
+- maybe linux refactor
+- code todos
+- try to break (e.g. set all arguments to NULL, 0 or empty array or string)
+- Do something about warning, error, todo (Logging system but with exits like error?)
+
+- rebuild yourself
+- git helper
+- templater
+
+- ALL CODE TODO COMMENTS
+
+- Add some examples in comments

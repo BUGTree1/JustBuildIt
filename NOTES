@@ -1,0 +1,25 @@
+pipe[1 + 1][i]
+    \/   |  |
+  read  \|/ |
+      write\|/
+           id
+           
+child0:
+stdin  = file?
+stdout = pipe[1 w][0]
+child1:
+stdin  = pipe[0 r][0]
+stdout = pipe[1 w][1]
+child2:
+stdin  = pipe[0 r][1]
+stdout = pipe[1 w][2]
+child3:
+stdin  = pipe[0 r][2]
+stdout = pipe[1 w][3]
+child4:
+stdin  = pipe[0 r][3]
+stdout = file?
+
+child n:
+stdin  = pipe[0][n - 1]
+stdout = pipe[1][n]

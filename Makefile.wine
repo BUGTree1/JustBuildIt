@@ -1,4 +1,4 @@
-CXX = g++
+CXX = x86_64-w64-mingw32-g++
 CXXFLAGS = -static -Isrc -Wall -Wextra -O3 -std=c++17 -Wno-unused-parameter
 
 OUT_DIR    = bin
@@ -7,15 +7,9 @@ CXX_OUT    = $(OUT_DIR)/buildit
 
 LIB_SRC    = src/buildit.cpp
 LIB_HEADER = src/buildit.h
-LIB_OUT    = buildit.h
 
-test: build
-	$(CXX_OUT) -t c test
-
-build: $(LIB_OUT) $(CXX_OUT)
-
-$(LIB_OUT): $(LIB_SRC) $(LIB_HEADER)
-#	cat $(LIB_HEADER) > $(LIB_OUT)
+test: $(CXX_OUT)
+	WINEDEBUG=fixme-all wine $(CXX_OUT) -t c test
 
 $(CXX_OUT): $(LIB_SRC) $(LIB_HEADER) $(CXX_SRC) $(OUT_DIR)
 	$(CXX) $(CXXFLAGS) $(CXX_SRC) $(LIB_SRC) -o $(CXX_OUT)
