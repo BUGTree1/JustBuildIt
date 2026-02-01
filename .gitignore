@@ -1,6 +1,3 @@
 /bin/
 /.vscode/
 /.clangd
-/stdin.txt
-/stdout.txt
-/stderr.txt
