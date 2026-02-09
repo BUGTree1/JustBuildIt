@@ -21,8 +21,16 @@ int execute_cmd(Command cmd, vector<Process>* async){
     
     #ifdef BUILDIT_OS_WINDOWS
     
-    // TODO: rewrite in UCRT
-    todo("WINDOWS UCRT execute_cmd");
+    string exec_string = absolute_executable.string();
+    execv_arglist params = {exec_string.c_str(), str_vec_to_cstr_arr(cmd.arguments)};
+    
+    uintptr_t thread = _beginthreadex(NULL, 0, ([](void* execv_params){
+        ASSERT_ERRNO(_execv(((execv_arglist*)execv_params)->exec, ((execv_arglist*)execv_params)->args) != -1);
+        return (unsigned int)0;
+    }), (void*)&params, 0, NULL);
+    ASSERT_ERRNO(thread != 0);
+    
+    created_process = {(HANDLE)thread};
     
     #else // BUILDIT_OS_WINDOWS
         
@@ -58,34 +66,6 @@ vector<int> execute_cmds(vector<Command> cmds, vector<Process>* async){
         return_vec.push_back(execute_cmd(cmds[i], async));
     }
     return return_vec;
-}
-int wait_for_process(Process process){
-    #ifdef BUILDIT_OS_WINDOWS
-    DWORD exit_code = 0;
-    
-    ASSERT_WINAPI(WaitForSingleObject(process.pi.hProcess, INFINITE) != WAIT_FAILED);
-    ASSERT_WINAPI(GetExitCodeProcess(process.pi.hProcess, &exit_code));
-
-    CloseHandle(process.pi.hProcess);
-    CloseHandle(process.pi.hThread);
-    
-    return exit_code;
-    
-    #else // BUILDIT_OS_WINDOWS
-    
-    int child_status = 0;
-    ASSERT_ERRNO(waitpid(process.pid, &child_status, 0) != -1);
-    free_cstr_arr(process.executable_args);
-    return WEXITSTATUS(child_status);
-    
-    #endif // BUILDIT_OS_WINDOWS
-}
-vector<int> wait_for_processes(vector<Process> processes){
-    vector<int> vec = vector<int>();
-    for(size_t i = 0; i < processes.size(); i++) {
-        vec.push_back(wait_for_process(processes[i]));
-    }
-    return vec;
 }
 vector<int> chain_commands(vector<Command> cmds, vector<Process>* async) {
     if(cmds.size() < 2) {
@@ -175,6 +155,35 @@ vector<int> chain_commands(vector<Command> cmds, vector<Process>* async) {
     #endif // BUILDIT_OS_WINDOWS
     
     return exit_codes;
+}
+int wait_for_process(Process process){
+    #ifdef BUILDIT_OS_WINDOWS
+    DWORD exit_code = 0;
+    
+    //TODO: fix \/ exiting
+    ASSERT_WINAPI(WaitForSingleObject(process.thread, INFINITE) == WAIT_OBJECT_0);
+    cout << "ABOBA" << endl;
+    ASSERT_WINAPI(GetExitCodeThread(process.thread, &exit_code));
+
+    ASSERT_WINAPI(CloseHandle(process.thread));
+    
+    return exit_code;
+    
+    #else // BUILDIT_OS_WINDOWS
+    
+    int child_status = 0;
+    ASSERT_ERRNO(waitpid(process.pid, &child_status, 0) != -1);
+    free_cstr_arr(process.executable_args);
+    return WEXITSTATUS(child_status);
+    
+    #endif // BUILDIT_OS_WINDOWS
+}
+vector<int> wait_for_processes(vector<Process> processes){
+    vector<int> vec = vector<int>();
+    for(size_t i = 0; i < processes.size(); i++) {
+        vec.push_back(wait_for_process(processes[i]));
+    }
+    return vec;
 }
 
 Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, std::vector<fs::path> include_dirs, bool all_warnings, bool pedantic) {

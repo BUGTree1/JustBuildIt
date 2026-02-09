@@ -32,9 +32,16 @@
 
 #ifdef BUILDIT_OS_WINDOWS
 #include <windows.h>
+#include <process.h>
+#include <errno.h>
 
 #define BUILDIT_ENV_PATH_SEPARATOR ";"
 #define BUILDIT_OS_ARG_CHAR "/"
+
+struct execv_arglist{
+    const char* exec;
+    const char* const* args;
+};
 
 #define ASSERT_WINAPI(v) if(!(v)) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" GetLastError(): ") + to_string(GetLastError()));
 #else // BUILDIT_OS_WINDOWS
@@ -45,9 +52,9 @@
 
 #define BUILDIT_ENV_PATH_SEPARATOR ":"
 #define BUILDIT_OS_ARG_CHAR "-"
+#endif // BUILDIT_OS_WINDOWS
 
 #define ASSERT_ERRNO(v) if(!(v)) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" Errno: ") + to_string(errno) + " - " + strerror(errno));
-#endif // BUILDIT_OS_WINDOWS
 
 namespace buildit {
 
@@ -55,7 +62,7 @@ namespace fs = std::filesystem;
 
 struct Process {
     #ifdef BUILDIT_OS_WINDOWS
-    PROCESS_INFORMATION pi;
+    HANDLE thread;
     #else // BUILDIT_OS_WINDOWS
     char** executable_args;
     pid_t pid;
