@@ -2,7 +2,9 @@ DONE:
 - REWRITE in OS API (posix, windows, maybe macos?)
 
 TODO:
-TEST UCRT with arguments with spaces and quotes
+
+TEST UCRT with arguments with spaces and quotes!
+
 - Write WinAPI bindings
 - replace stdin/out/err file strings with plain pipes in execute_cmd
 - add functions for creating and manipulating pipes
@@ -14,6 +16,8 @@ TEST UCRT with arguments with spaces and quotes
 - Add compiler and other stuff to create_clangd_settings
 - Incremental build (function for checking if file needs to be rebuilt)
 - function to build all .c or .cpp files from folder (incrementally) (auto mode)
+in this auto function to test if file needs to be rebuilt because of a header just "grep" all files 
+in this folder and if its in there than check it for rebuild
 
 - rebuild yourself
 - git helper
