@@ -9,9 +9,11 @@ LIB_SRC    = src/buildit.cpp
 LIB_HEADER = src/buildit.h
 LIB_OUT    = buildit.h
 
+.PHONY: test
 test: build
 	$(CXX_OUT) -t c test
 
+.PHONY: build
 build: $(LIB_OUT) $(CXX_OUT)
 
 $(LIB_OUT): $(LIB_SRC) $(LIB_HEADER)

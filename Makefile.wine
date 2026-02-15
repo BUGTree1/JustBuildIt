@@ -8,6 +8,7 @@ CXX_OUT    = $(OUT_DIR)/buildit
 LIB_SRC    = src/buildit.cpp
 LIB_HEADER = src/buildit.h
 
+.PHONY: test
 test: $(CXX_OUT)
 	WINEDEBUG=fixme-all wine $(CXX_OUT) -t c test
 
