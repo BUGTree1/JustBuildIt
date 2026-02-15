@@ -14,14 +14,26 @@
 #if defined(_WIN32) || defined(_WIN64)
 #define BUILDIT_OS_WINDOWS
 #endif
-#if defined(__APPLE__) || defined(__MACH__)
-#define BUILDIT_OS_MACOS
+#if defined(__APPLE__)
+#define BUILDIT_OS_APPLE
 #endif
 #if defined(__linux__) || defined(linux) || defined(__linux)
 #define BUILDIT_OS_LINUX
 #endif
-#if defined(BSD) || defined(__FreeBSD__)
+#if defined(BSD)
 #define BUILDIT_OS_BSD
+#endif
+#if defined(__FreeBSD__)
+#define BUILDIT_OS_FREEBSD
+#endif
+#if defined(__OpenBSD__)
+#define BUILDIT_OS_OPENBSD
+#endif
+#if defined(__NetBSD__)
+#define BUILDIT_OS_NETBSD
+#endif
+#if defined(__DragonFly__)
+#define BUILDIT_OS_DRAGONFLY_BSD
 #endif
 #if defined(__sun)
 #define BUILDIT_OS_SOLARIS
@@ -34,17 +46,17 @@
 #include <windows.h>
 #include <process.h>
 #include <errno.h>
+#include <io.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #define BUILDIT_ENV_PATH_SEPARATOR ";"
 #define BUILDIT_OS_ARG_CHAR "/"
 
-struct execv_arglist{
-    const char* exec;
-    const char* const* args;
-};
-
 #define ASSERT_WINAPI(v) if(!(v)) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" GetLastError(): ") + to_string(GetLastError()));
+
 #else // BUILDIT_OS_WINDOWS
+
 #include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
@@ -55,6 +67,7 @@ struct execv_arglist{
 #endif // BUILDIT_OS_WINDOWS
 
 #define ASSERT_ERRNO(v) if(!(v)) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" Errno: ") + to_string(errno) + " - " + strerror(errno));
+#define ASSERT_TRUE(v, err_msg) { long long assert_ret_val = (v); if(assert_ret_val) buildit::error(/*string(__FILE__) + ":" + to_string(__LINE__) + */string(" Returned: ") + to_string(assert_ret_val) + string(" ") + (err_msg));}
 
 namespace buildit {
 
@@ -62,7 +75,7 @@ namespace fs = std::filesystem;
 
 struct Process {
     #ifdef BUILDIT_OS_WINDOWS
-    HANDLE thread;
+    PROCESS_INFORMATION process;
     #else // BUILDIT_OS_WINDOWS
     char** executable_args;
     pid_t pid;
@@ -124,9 +137,9 @@ std::vector<T> concat_vec(std::vector<T> vec1, std::vector<T> vec2){
     return vec;
 }
 
-// Find executable file/program in environment variable PATH
-fs::path find_in_env_path(fs::path filename);
-fs::path find_first_in_env_path(std::vector<fs::path> filenames);
+// Find executable file/program in environment variable PATH 
+fs::path find_in_env_path(fs::path filename, bool search_working_dir = true);
+fs::path find_first_in_env_path(std::vector<fs::path> filenames, bool search_working_dir = true);
 // Canonize path (make it absolute and with system separators) if it is not already.
 // If executable is true find the path in PATH environment variable.
 // If check_empty is true return empty path when input path is empty otherwise on empty input will return base_dir.
@@ -143,11 +156,13 @@ void todo(std::string desc);
 
 #ifdef BUILDIT_OS_WINDOWS
 
+std::string command_to_cmd_line(Command cmd);
+
 #else
 // Replace fd/fileno (e.g. STDOUT_FILENO) with a file. 
 // If input path is empty does nothing.
 // Remember to set O_RDONLY, O_WRONLY or O_RDWR in open_flags.
-void set_fd_as_file(fs::path file, int fd, int open_flags, int create_file_permissions = 0666);
+void set_fd_as_file(string file, int fd, int open_flags, int create_file_permissions = 0666);
 #endif
 
 }
