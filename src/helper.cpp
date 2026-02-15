@@ -1,3 +1,4 @@
+#define BUILDIT_LOG
 #include "buildit.h"
 
 using namespace std;
@@ -9,26 +10,16 @@ using namespace buildit;
 #ifdef BUILDIT_OS_WINDOWS
 #define PWD_TEST_CMD "echo RUNNING IN DIR %cd%"
 #define PIPE_TEST_CMD "findstr \"^\""
-#else //BUILDIT_OS_WINDOWS
+#else 
 #define PWD_TEST_CMD "echo RUNNING IN DIR $PWD"
 #define PIPE_TEST_CMD "cat"
-#endif //BUILDIT_OS_WINDOWS
+#endif
 
 int main() {
-    vector<Process> processes = vector<Process>();
-    //cout << "SHELL: " << get_system_shell() << endl;
-    //execute_cmd({"cowsay", {"ABOBA"}});
-    //execute_cmd({get_system_shell(), {BUILDIT_OS_ARG_CHAR"c", PWD_TEST_CMD}, "bin"});
-    //cout << "SHELL EXIT 69: " << execute_cmd({get_system_shell(), {BUILDIT_OS_ARG_CHAR"c", "exit 69"}}) << endl;
-    //execute_cmd({get_system_shell(), {BUILDIT_OS_ARG_CHAR"c", PIPE_TEST_CMD}, "", "stdin.txt", "stdout.txt", "stderr.txt"});
-    //execute_cmds({{"cowsay", {"ABOBA"}}, {"cowsay", {"XPP"}}, {get_system_shell(), {BUILDIT_OS_ARG_CHAR"c", "exit 69"}}}, &processes);
-    //cout << (vec_any_nonzero(wait_for_processes(processes)) ? "FAILED" : "SUCCESS") << endl;
-    //execute_cmd({"touch", {"XPP.txt"}, "bin"});
-    //vector<int> returns = chain_commands({{"echo", {"ABOBA"}}, {"cat", {}}});
-    //cout << (vec_any_nonzero(returns) ? "FAILED" : "SUCCESS") << endl;
-    //chain_commands({{"cat", {}, "", "stdin.txt"}, {"cat", {}, "", "", "stdout.txt"}});
-    //chain_commands({{get_system_shell(), {BUILDIT_OS_ARG_CHAR"c", PWD_TEST_CMD}, "bin"}});
-    chain_commands({{get_system_shell(), {BUILDIT_OS_ARG_CHAR"c", PIPE_TEST_CMD}, "", "stdin.txt"},{get_system_shell(), {BUILDIT_OS_ARG_CHAR"c", PIPE_TEST_CMD}},{get_system_shell(), {BUILDIT_OS_ARG_CHAR"c", PIPE_TEST_CMD}, "", "", "stdout.txt"}});
-    wait_for_processes(processes);
+    BUILDIT_LOG_BOOL;
+    
+    vector<fs::path> obj_vec = vector<fs::path>();
+    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"test/test.cpp"}, &obj_vec, {"test"}, OPTIMIZATION_SPEED, true, true));
+    execute_cmd(get_link_cmd(find_cxx_linker(), obj_vec, OPTIMIZATION_SPEED, true));
     return 0;
 }

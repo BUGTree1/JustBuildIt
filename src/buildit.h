@@ -55,7 +55,7 @@
 
 #define ASSERT_WINAPI(v) if(!(v)) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" GetLastError(): ") + to_string(GetLastError()));
 
-#else // BUILDIT_OS_WINDOWS
+#else // !BUILDIT_OS_WINDOWS
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -69,6 +69,14 @@
 #define ASSERT_ERRNO(v) if(!(v)) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" Errno: ") + to_string(errno) + " - " + strerror(errno));
 #define ASSERT_TRUE(v, err_msg) { long long assert_ret_val = (v); if(assert_ret_val) buildit::error(/*string(__FILE__) + ":" + to_string(__LINE__) + */string(" Returned: ") + to_string(assert_ret_val) + string(" ") + (err_msg));}
 
+#ifndef BUILDIT_LOG_BOOL
+#ifdef BUILDIT_LOG
+#define BUILDIT_LOG_BOOL true
+#else
+#define BUILDIT_LOG_BOOL false
+#endif
+#endif
+
 namespace buildit {
 
 namespace fs = std::filesystem;
@@ -76,10 +84,10 @@ namespace fs = std::filesystem;
 struct Process {
     #ifdef BUILDIT_OS_WINDOWS
     PROCESS_INFORMATION process;
-    #else // BUILDIT_OS_WINDOWS
+    #else
     char** executable_args;
     pid_t pid;
-    #endif // BUILDIT_OS_WINDOWS
+    #endif
 };
 
 enum Optimization_Level {
@@ -105,7 +113,8 @@ fs::path find_c_linker(std::vector<fs::path> linkers = {});
 fs::path find_cxx_linker(std::vector<fs::path> linkers = {});
 fs::path find_linker(std::vector<fs::path> linkers = {});
 
-Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, std::vector<fs::path> include_dirs = {}, bool all_warnings = false, bool pedantic = false);
+// if object files is empty it will be source paths with the extension changed to ".o" if it is not NULL and there is less than source files elements it will return the source paths with ".o" extension
+Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, std::vector<fs::path>* object_files, std::vector<fs::path> include_dirs = {}, Optimization_Level optimize = OPTIMIZATION_NONE, bool all_warnings = false, bool pedantic = false);
 Command get_link_cmd(fs::path linker, std::vector<fs::path> objects, Optimization_Level optimize = OPTIMIZATION_NONE, bool native_arch = false);
 
 // Executes a Command. Returns the exit code if async is NULL and 0 if its not. If async is not NULL it just starts a process and pushes it inside.
@@ -115,6 +124,7 @@ int wait_for_process(Process process);
 
 std::vector<int> execute_cmds(std::vector<Command> cmds, std::vector<Process>* async = NULL);
 std::vector<int> wait_for_processes(std::vector<Process> processes);
+
 // chain commands so ones stdout is connected to the next ones stdin than wait for all them to exit. Returns the vector of all exit codes.
 std::vector<int> chain_commands(std::vector<Command> cmds, std::vector<Process>* async = NULL);
 

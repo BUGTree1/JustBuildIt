@@ -1,16 +1,13 @@
 DONE:
 - REWRITE in OS API (posix, windows, maybe macos?)
+- Write WinAPI bindings
+- rewrite get_current_executable_path to support all oses
 
 TODO:
 
 TEST UCRT with arguments with spaces and quotes!
 
-- Write WinAPI bindings
-- replace stdin/out/err file strings with plain pipes in execute_cmd
-- add functions for creating and manipulating pipes
-- rewrite get_current_executable_path to support all oses (no /proc on e.g. BSD) maybe just canonize argv[0]?
 - maybe linux refactor
-- code todos
 - try to break (e.g. set all arguments to NULL, 0 or empty array or string)
 - Do something about warning, error, todo (Logging system but with exits like error?)
 - Add compiler and other stuff to create_clangd_settings
@@ -26,3 +23,5 @@ in this folder and if its in there than check it for rebuild
 - ALL CODE TODO COMMENTS
 
 - Add some examples in comments
+
+- Test on linux, window, macos, BSD

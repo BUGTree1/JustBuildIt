@@ -59,7 +59,7 @@ int execute_cmd(Command cmd, vector<Process>* async){
     
     created_process = {pi};
     
-    #else // BUILDIT_OS_WINDOWS
+    #else // !BUILDIT_OS_WINDOWS
     
     string abs_executable_string = abs_executable.string();
     char** executable_args = str_vec_to_cstr_arr(concat_vec(vector<string>({abs_executable_string}), cmd.arguments));
@@ -113,75 +113,113 @@ vector<int> chain_commands(vector<Command> cmds, vector<Process>* async) {
     
     #ifdef BUILDIT_OS_WINDOWS
     
+    fs::path prev_working_dir = fs::current_path();
+    HANDLE pipe_read = NULL;
+
     SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), NULL, TRUE };
-    struct Pipe_Handles { HANDLE read; HANDLE write; };
-    vector<Pipe_Handles> pipes = vector<Pipe_Handles>(cmds.size() - 1);
-    HANDLE file_in_handle = NULL;
-    HANDLE file_out_handle = NULL;
-    
-    for(size_t i = 0; i < cmds.size() - 1; i++) {
-        ASSERT_WINAPI(CreatePipe(&pipes[i].read, &pipes[i].write, &sa, 0) != 0);
-        ASSERT_WINAPI(SetHandleInformation(pipes[i].read,  HANDLE_FLAG_INHERIT, FALSE) != 0);
-        ASSERT_WINAPI(SetHandleInformation(pipes[i].write, HANDLE_FLAG_INHERIT, FALSE) != 0);
-    }
-    
-    for(size_t i = 0; i < cmds.size(); i++) {
+
+    for (size_t i = 0; i < cmds.size(); ++i) {
         HANDLE in_handle  = NULL;
         HANDLE out_handle = NULL;
-        if(i > 0) {
-            in_handle = pipes[i - 1].read;
-            SetHandleInformation(in_handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
-        }else if (abs_stdin_file_str != ""){
-            in_handle = CreateFileA(abs_stdin_file_str.c_str(), GENERIC_READ, 0, &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-            ASSERT_WINAPI(in_handle != INVALID_HANDLE_VALUE);
-            file_in_handle = in_handle;
-        }else{
-            in_handle = GetStdHandle(STD_INPUT_HANDLE);
-            ASSERT_WINAPI(SetHandleInformation(in_handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT));
-        }
-        if(i + 1 < cmds.size()) {
-            out_handle = pipes[i].write;
-            SetHandleInformation(out_handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
-        }else if (abs_stdout_file_str != ""){
-            out_handle = CreateFileA(abs_stdout_file_str.c_str(), GENERIC_WRITE, 0, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-            ASSERT_WINAPI(out_handle != INVALID_HANDLE_VALUE);
-            file_out_handle = out_handle;
-        }else{
-            out_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-            ASSERT_WINAPI(SetHandleInformation(out_handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT));
-        }
-    
+        HANDLE err_handle = NULL;
+        HANDLE pipe_read_next = NULL;
+        
+        bool is_first = (i == 0);
+        bool is_last  = (i == cmds.size() - 1);
+
+        fs::path abs_executable = canonize_path(cmds[i].executable, true);
+        if (abs_executable == fs::path("")) error("Could not find executable: " + cmds[i].executable.string() + " !");
+
+        fs::path abs_working_dir = canonize_path(cmds[i].working_dir);
+        fs::current_path(abs_working_dir);
+
         string cmd_line = command_to_cmd_line(cmds[i]);
         char* cmd_line_cstr = (char*)malloc(cmd_line.size() + 1);
         strcpy(cmd_line_cstr, cmd_line.c_str());
         
+        if (is_first) {
+            fs::path abs_stdin_file = canonize_path(cmds[i].stdin_file, false, true);
+            string abs_stdin_file_str = abs_stdin_file.string();
+            
+            if (abs_stdin_file_str != "" && !fs::exists(abs_stdin_file)) 
+                 error("stdin file not found: " + cmds[i].stdin_file.string());
+
+            if (abs_stdin_file_str != "") {
+                in_handle = CreateFileA(abs_stdin_file_str.c_str(), GENERIC_READ, 0, &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                ASSERT_WINAPI(in_handle != INVALID_HANDLE_VALUE);
+            } else {
+                in_handle = GetStdHandle(STD_INPUT_HANDLE);
+            }
+        } else {
+            in_handle = pipe_read;
+        }
+        
+        if (is_last) {
+            fs::path abs_stdout_file = canonize_path(cmds[i].stdout_file, false, true);
+            string abs_stdout_file_str = abs_stdout_file.string();
+
+            if (abs_stdout_file_str != "") {
+                out_handle = CreateFileA(abs_stdout_file_str.c_str(), GENERIC_WRITE, 0, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+                ASSERT_WINAPI(out_handle != INVALID_HANDLE_VALUE);
+            } else {
+                out_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+            }
+        } else {
+            HANDLE pipe_write = NULL; 
+            ASSERT_WINAPI(CreatePipe(&pipe_read_next, &pipe_write, &sa, 0) != 0);
+            out_handle = pipe_write;
+        }
+
+        fs::path abs_stderr_file = canonize_path(cmds[i].stderr_file, false, true);
+        string abs_stderr_file_str = abs_stderr_file.string();
+        if (abs_stderr_file_str != "") {
+            err_handle = CreateFileA(abs_stderr_file_str.c_str(), GENERIC_WRITE, 0, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            ASSERT_WINAPI(err_handle != INVALID_HANDLE_VALUE);
+        } else {
+            err_handle = GetStdHandle(STD_ERROR_HANDLE);
+        }
+
         STARTUPINFOA si = {};
         si.cb = sizeof(si);
         si.dwFlags = STARTF_USESTDHANDLES;
-        si.hStdInput  = in_handle ;
+        si.hStdInput  = in_handle;
         si.hStdOutput = out_handle;
-        si.hStdError  = GetStdHandle(STD_ERROR_HANDLE);
-        SetHandleInformation(si.hStdError, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
+        si.hStdError  = err_handle;
+        
         PROCESS_INFORMATION pi = {};
         ASSERT_WINAPI(CreateProcessA(NULL, cmd_line_cstr, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi) != 0);
-        free(cmd_line_cstr);
         
-        if(async == NULL){
+        if (async == NULL) {
             sync_vec.push_back({pi});
         }else{
             (*async).push_back({pi});
         }
+
+        free(cmd_line_cstr);
+
+        if (is_first && in_handle != GetStdHandle(STD_INPUT_HANDLE)){
+            ASSERT_WINAPI(CloseHandle(in_handle) != 0);
+        }
+        if (is_last  && out_handle != GetStdHandle(STD_OUTPUT_HANDLE)){
+            ASSERT_WINAPI(CloseHandle(out_handle) != 0);
+        }
+        if (err_handle != GetStdHandle(STD_ERROR_HANDLE)){
+            ASSERT_WINAPI(CloseHandle(err_handle) != 0);
+        }
+
+        if (!is_first) {
+            ASSERT_WINAPI(CloseHandle(pipe_read) != 0);
+        }
+        
+        if (!is_last) {
+            ASSERT_WINAPI(CloseHandle(out_handle) != 0);
+            pipe_read = pipe_read_next; 
+        }
     }
+
+    fs::current_path(prev_working_dir);
     
-    for(size_t i = 0; i < cmds.size() - 1; i++) {
-        ASSERT_WINAPI(CloseHandle(pipes[i].read) != 0);
-        ASSERT_WINAPI(CloseHandle(pipes[i].write) != 0);
-    }
-    
-    if (file_in_handle)  ASSERT_WINAPI(CloseHandle(file_in_handle)  != 0);
-    if (file_out_handle) ASSERT_WINAPI(CloseHandle(file_out_handle) != 0);
-    
-    #else // BUILDIT_OS_WINDOWS
+    #else // !BUILDIT_OS_WINDOWS
     
     int pipes[2][cmds.size() - 1];
     for(size_t i = 0; i < cmds.size() - 1; i++) {
@@ -263,7 +301,7 @@ int wait_for_process(Process process){
     
     return exit_code;
     
-    #else // BUILDIT_OS_WINDOWS
+    #else // !BUILDIT_OS_WINDOWS
     
     int child_status = 0;
     ASSERT_ERRNO(waitpid(process.pid, &child_status, 0) != -1);
@@ -473,7 +511,7 @@ string command_to_cmd_line(Command cmd){
     }
     return cmd_line;
 }
-#else
+#else // !BUILDIT_OS_WINDOWS
 void set_fd_as_file(string file, int fd, int open_flags, int create_file_permissions) {
     if(file != "") {
         ASSERT_ERRNO(fd != -1);
