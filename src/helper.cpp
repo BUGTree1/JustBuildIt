@@ -1,4 +1,4 @@
-#define BUILDIT_LOG
+#define BUILDIT_DEBUG
 #include "buildit.h"
 
 using namespace std;
@@ -16,10 +16,11 @@ using namespace buildit;
 #endif
 
 int main() {
-    BUILDIT_LOG_BOOL;
+    BUILDIT_DEBUG_BOOL;
     
-    vector<fs::path> obj_vec = vector<fs::path>();
-    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"test/test.cpp"}, &obj_vec, {"test"}, OPTIMIZATION_SPEED, true, true));
-    execute_cmd(get_link_cmd(find_cxx_linker(), obj_vec, OPTIMIZATION_SPEED, true));
+    execute_cmd({"mkdir", {"test"}});
+    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"src/buildit.cpp"}, {"test/test"}, {"src"}, true, OPTIMIZATION_SPEED, true, true));
+    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"src/helper.cpp"}, {"test/test2"}, {"src"}, true, OPTIMIZATION_SPEED, true, true));
+    execute_cmd(get_link_cmd(find_cxx_linker(), "test/test", {"test/test", "test/test2"}, {}, {}, true, OPTIMIZATION_SPEED));
     return 0;
 }

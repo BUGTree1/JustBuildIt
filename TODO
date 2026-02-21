@@ -6,6 +6,7 @@ DONE:
 TODO:
 
 TEST UCRT with arguments with spaces and quotes!
+TEST MSVC
 
 - maybe linux refactor
 - try to break (e.g. set all arguments to NULL, 0 or empty array or string)
@@ -13,6 +14,8 @@ TEST UCRT with arguments with spaces and quotes!
 - Add compiler and other stuff to create_clangd_settings
 - Incremental build (function for checking if file needs to be rebuilt)
 - function to build all .c or .cpp files from folder (incrementally) (auto mode)
+- Multithreading
+- progressbar
 in this auto function to test if file needs to be rebuilt because of a header just "grep" all files 
 in this folder and if its in there than check it for rebuild
 

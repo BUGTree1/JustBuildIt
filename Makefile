@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -static -Isrc -Wall -Wextra -O3 -std=c++17 -Wno-unused-parameter
+CXXFLAGS = -static -Isrc -Wall -Wextra -O3 -std=c++17
 
 OUT_DIR    = bin
 CXX_SRC    = src/helper.cpp

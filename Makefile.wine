@@ -1,9 +1,9 @@
-CXX = x86_64-w64-mingw32-g++
-CXXFLAGS = -static -Isrc -Wall -Wextra -O3 -std=c++17 -Wno-unused-parameter
+CXX = WINEDEBUG=fixme-all wine /opt/msvc/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe
+CXXFLAGS = /I src /I Z:\opt\msvc\VC\Tools\MSVC\14.44.35207\include /Wall /O2
 
 OUT_DIR    = bin
 CXX_SRC    = src/helper.cpp
-CXX_OUT    = $(OUT_DIR)/buildit
+CXX_OUT    = $(OUT_DIR)/buildit.exe
 
 LIB_SRC    = src/buildit.cpp
 LIB_HEADER = src/buildit.h
@@ -13,7 +13,7 @@ test: $(CXX_OUT)
 	WINEDEBUG=fixme-all wine $(CXX_OUT) -t c test
 
 $(CXX_OUT): $(LIB_SRC) $(LIB_HEADER) $(CXX_SRC) $(OUT_DIR)
-	$(CXX) $(CXXFLAGS) $(CXX_SRC) $(LIB_SRC) -o $(CXX_OUT)
+	$(CXX) $(CXXFLAGS) $(CXX_SRC) $(LIB_SRC) /Fe: $(CXX_OUT)
 
 $(OUT_DIR):
 	mkdir $(OUT_DIR) || echo directory bin created
