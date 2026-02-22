@@ -5,10 +5,11 @@ DONE:
 
 TODO:
 
-TEST UCRT with arguments with spaces and quotes!
-TEST MSVC
+SIMPLIFY FINDING COMPILERS and LINKERS
+CONFIGS GENERATORS
 
 - maybe linux refactor
+- debugging enable
 - try to break (e.g. set all arguments to NULL, 0 or empty array or string)
 - Do something about warning, error, todo (Logging system but with exits like error?)
 - Add compiler and other stuff to create_clangd_settings

@@ -2,15 +2,6 @@
 #ifndef __BUILDIT_H__
 #define __BUILDIT_H__
 
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <vector>
-#include <thread>
-#include <string>
-#include <cstring>
-#include <filesystem>
-
 #if defined(_WIN32) || defined(_WIN64)
 #define BUILDIT_OS_WINDOWS
 #endif
@@ -71,6 +62,8 @@
 #endif
 
 #ifdef BUILDIT_OS_WINDOWS
+
+#define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>
 #include <process.h>
 #include <errno.h>
@@ -81,6 +74,7 @@
 #define BUILDIT_ENV_PATH_SEPARATOR ";"
 #define BUILDIT_OS_ARG_CHAR "/"
 #define BUILDIT_OS_OBJ_EXTENSION ".obj"
+#define BUILDIT_OS_EXE_EXTENSION ".exe"
 
 #define ASSERT_WINAPI(v) if(!(v)) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" GetLastError(): ") + to_string(GetLastError()));
 
@@ -94,7 +88,18 @@
 #define BUILDIT_ENV_PATH_SEPARATOR ":"
 #define BUILDIT_OS_ARG_CHAR "-"
 #define BUILDIT_OS_OBJ_EXTENSION ".o"
+#define BUILDIT_OS_EXE_EXTENSION ""
+
 #endif // BUILDIT_OS_WINDOWS
+
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <vector>
+#include <thread>
+#include <string>
+#include <cstring>
+#include <filesystem>
 
 #define ASSERT_ERRNO(v) if(!(v)) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" Errno: ") + to_string(errno) + " - " + strerror(errno));
 #define ASSERT_TRUE(v, err_msg) { long long assert_ret_val = (v); if(assert_ret_val) buildit::error(/*string(__FILE__) + ":" + to_string(__LINE__) + */string(" Returned: ") + to_string(assert_ret_val) + string(" ") + (err_msg));}
@@ -152,8 +157,8 @@ fs::path find_cxx_linker(std::vector<fs::path> linkers = {});
 fs::path find_linker(std::vector<fs::path> linkers = {});
 
 // auto_extensions automatically append .obj for object files and .exe to executable on windows and .o for object and nothing for executable on other platforms
-Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, fs::path object, std::vector<fs::path> include_dirs = {}, bool auto_extensions = true, Optimization_Level optimize = OPTIMIZATION_NONE, bool all_warnings = false, bool pedantic = false, bool native_arch = false);
-Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path> objects, std::vector<fs::path> libraries, std::vector<fs::path> library_dirs, bool auto_extensions = true, Optimization_Level optimize = OPTIMIZATION_NONE);
+Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, fs::path object, std::vector<fs::path> include_dirs = {}, bool auto_extensions = true, Optimization_Level optimize = OPTIMIZATION_NONE, bool debug = false, int version = 17, bool all_warnings = false, bool pedantic = false, bool native_arch = false);
+Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path> objects, std::vector<fs::path> libraries, std::vector<fs::path> library_dirs, bool auto_extensions = true, Optimization_Level optimize = OPTIMIZATION_NONE, bool debug = false);
 
 // Executes a Command. Returns the exit code if async is NULL and 0 if its not. If async is not NULL it just starts a process and pushes it inside.
 int execute_cmd(Command cmd, std::vector<Process>* async = NULL);

@@ -5,7 +5,7 @@ using namespace std;
 
 namespace buildit {
 
-Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, fs::path object, std::vector<fs::path> include_dirs, bool auto_extensions, Optimization_Level optimize, bool all_warnings, bool pedantic, bool native_arch) {
+Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, fs::path object, std::vector<fs::path> include_dirs, bool auto_extensions, Optimization_Level optimize, bool debug, int version, bool all_warnings, bool pedantic, bool native_arch) {
     std::vector<fs::path> abs_source_files = canonize_paths(source_files, false, true);
     std::vector<fs::path> abs_include_dirs = canonize_paths(include_dirs, false, true);
     fs::path abs_object = canonize_path(object, false, true);
@@ -15,19 +15,21 @@ Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, f
     fs::path abs_compiler = canonize_path(compiler, true);
     string compiler_name = to_lower(abs_compiler.filename().string());
     
+    bool cxx = contains(compiler_name, "++");
+    
     Command cmd = {abs_compiler, vector<string>()};
     if (contains(compiler_name, "cl.exe")){
         cmd.arguments.push_back("/c");
+        cmd.arguments.push_back("/EHsc");
+        cmd.arguments.push_back("/Z7");
+        cmd.arguments.push_back("/std:c++" + to_string(version));
         cmd.arguments.push_back("/Fo:");
         cmd.arguments.push_back(abs_object.string());
-        for(size_t i = 0; i < abs_source_files.size(); i++) {
-            cmd.arguments.push_back(abs_source_files[i].string());
-        }
         for(size_t i = 0; i < abs_include_dirs.size(); i++) {
             cmd.arguments.push_back("/I");
             cmd.arguments.push_back(abs_include_dirs[i].string());
         }
-        if(all_warnings) cmd.arguments.push_back("/Wall");
+        if(all_warnings) cmd.arguments.push_back("/W4"); // not /Wall to ignore system headers warnings XPP
         if(pedantic) log(LOG_LEVEL_WARNING, "MSVC does not have a pedantic flag!");
         if(native_arch) {
             #if defined(BUILDIT_OS_AVX512)
@@ -56,6 +58,9 @@ Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, f
                 error("Unknown optimization level!");
             break;
         }
+        for(size_t i = 0; i < abs_source_files.size(); i++) {
+            cmd.arguments.push_back(abs_source_files[i].string());
+        }
     } else {
         cmd.arguments.push_back("-c");
         cmd.arguments.push_back("-o");
@@ -71,8 +76,11 @@ Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, f
             cmd.arguments.push_back("-Wall");
             cmd.arguments.push_back("-Wextra");
         }
+        if(cxx) cmd.arguments.push_back("-std=c++" + to_string(version));
+        else cmd.arguments.push_back("-std=c" + to_string(version));
         if(pedantic) cmd.arguments.push_back("-pedantic");
         if(native_arch) cmd.arguments.push_back("-march=native");
+        if(debug) cmd.arguments.push_back("-g");
         switch(optimize) {
             case OPTIMIZATION_NONE:
                 cmd.arguments.push_back("-O0");
@@ -90,51 +98,51 @@ Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, f
     }
     return cmd;
 }
-Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path> objects, std::vector<fs::path> libraries, std::vector<fs::path> library_dirs, bool auto_extensions, Optimization_Level optimize) {
+Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path> objects, std::vector<fs::path> libraries, std::vector<fs::path> library_dirs, bool auto_extensions, Optimization_Level optimize, bool debug) {
     std::vector<fs::path> abs_objects = canonize_paths(objects, false, true);
     std::vector<fs::path> abs_library_dirs = canonize_paths(library_dirs, false, true);
     fs::path abs_output_file = canonize_path(output_file, false, true);
     
-    if(auto_extensions) for(size_t i = 0; i < abs_objects.size(); i++) abs_objects[i] = fs::path(abs_objects[i].string() + BUILDIT_OS_OBJ_EXTENSION);
-
+    if(auto_extensions) {
+        for(size_t i = 0; i < abs_objects.size(); i++) abs_objects[i] = fs::path(abs_objects[i].string() + BUILDIT_OS_OBJ_EXTENSION);
+        abs_output_file = fs::path(abs_output_file.string() + BUILDIT_OS_EXE_EXTENSION);
+    }
+    
     if(!linker.has_filename()) error("The linker doesent have a filename!");
     fs::path abs_linker = canonize_path(linker, true);
     string linker_name = to_lower(abs_linker.filename().string());
     
     Command cmd = {abs_linker, vector<string>()};
-    if (contains(linker_name, "cl.exe")){
-        cmd.arguments.push_back("/Fe:");
-        cmd.arguments.push_back(abs_output_file.string());
-        for(size_t i = 0; i < abs_objects.size(); i++) {
-            cmd.arguments.push_back(abs_objects[i].string());
-        }
+    if (contains(linker_name, "link.exe")){
+        cmd.arguments.push_back("/OUT:" + abs_output_file.string());
+        if(debug) cmd.arguments.push_back("/DEBUG:FULL");
+        else  cmd.arguments.push_back("/DEBUG:NONE");
         for(size_t i = 0; i < abs_library_dirs.size(); i++) {
-            cmd.arguments.push_back("/LIBPATH:");
-            cmd.arguments.push_back(abs_library_dirs[i].string());
-        }
-        for(size_t i = 0; i < libraries.size(); i++) {
-            cmd.arguments.push_back(libraries[i].string());
+            cmd.arguments.push_back("/LIBPATH:" + abs_library_dirs[i].string());
         }
         switch(optimize) {
             case OPTIMIZATION_NONE:
-                cmd.arguments.push_back("/Od");
+                cmd.arguments.push_back("/OPT:NOREF,NOICF,NOLBR");
             break;
             case OPTIMIZATION_SIZE:
-                cmd.arguments.push_back("/O1");
+                cmd.arguments.push_back("/OPT:REF,ICF,LBR");
             break;
             case OPTIMIZATION_SPEED:
-                cmd.arguments.push_back("/O2");
+                cmd.arguments.push_back("/OPT:REF,ICF,LBR");
             break;
             default:
                 error("Unknown optimization level!");
             break;
         }
-    } else {
-        cmd.arguments.push_back("-o");
-        cmd.arguments.push_back(abs_output_file.string());
         for(size_t i = 0; i < abs_objects.size(); i++) {
             cmd.arguments.push_back(abs_objects[i].string());
         }
+        for(size_t i = 0; i < libraries.size(); i++) {
+            cmd.arguments.push_back(libraries[i].string());
+        }
+    } else {
+        cmd.arguments.push_back("-o");
+        cmd.arguments.push_back(abs_output_file.string());
         for(size_t i = 0; i < abs_library_dirs.size(); i++) {
             cmd.arguments.push_back("-L");
             cmd.arguments.push_back(abs_library_dirs[i].string());
@@ -143,6 +151,7 @@ Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path
             cmd.arguments.push_back("-l");
             cmd.arguments.push_back(libraries[i].string());
         }
+        if(debug) cmd.arguments.push_back("-g");
         switch(optimize) {
             case OPTIMIZATION_NONE:
                 cmd.arguments.push_back("-O0");
@@ -157,15 +166,20 @@ Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path
                 error("Unknown optimization level!");
             break;
         }
+        for(size_t i = 0; i < abs_objects.size(); i++) {
+            cmd.arguments.push_back(abs_objects[i].string());
+        }
     }
     return cmd;
 }
 
 void create_vscode_settings(std::string cmd, fs::path dir) {
     todo("create_vscode_settings");
+    //NOW
 }
 void create_clangd_settings(std::string cmd, fs::path dir) {
     todo("create_clangd_settings");
+    //NOW
 }
 
 fs::path find_c_compiler(vector<fs::path> compilers){
@@ -186,11 +200,19 @@ fs::path find_cxx_compiler(vector<fs::path> compilers){
 }
 
 fs::path find_c_linker(vector<fs::path> linkers){
-    fs::path linker = find_c_compiler(linkers);
+    if(linkers.size() == 0) {
+        linkers = vector<fs::path>({"gcc", "clang", "link.exe"});
+    }
+    fs::path linker = find_first_in_env_path(linkers);
+    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Found C linker: " + linker.string());
     return linker;
 }
 fs::path find_cxx_linker(vector<fs::path> linkers){
-    fs::path linker = find_cxx_compiler(linkers);
+    if(linkers.size() == 0) {
+        linkers = vector<fs::path>({"g++", "clang++", "link.exe"});
+    }
+    fs::path linker = find_first_in_env_path(linkers);
+    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Found C++ linker: " + linker.string());
     return linker;
 }
 fs::path find_linker(vector<fs::path> linkers){
@@ -214,14 +236,14 @@ bool contains_any(std::string str, std::vector<std::string> tokens){
 std::string to_lower(std::string str) {
     string str_out = "";
     for(size_t i = 0; i < str.size(); i++){
-        str_out += tolower(str[i]);
+        str_out += (char)tolower((int)str[i]);
     }
     return str_out;
 }
 std::string to_upper(std::string str) {
     string str_out = "";
     for(size_t i = 0; i < str.size(); i++){
-        str_out += toupper(str[i]);
+        str_out += (char)toupper((int)str[i]);
     }
     return str_out;
 }
@@ -547,12 +569,6 @@ vector<int> chain_commands(vector<Command> cmds, vector<Process>* async) {
         strcpy(cmd_line_cstr, cmd_line.c_str());
         
         if (is_first) {
-            fs::path abs_stdin_file = canonize_path(cmds[i].stdin_file, false, true);
-            string abs_stdin_file_str = abs_stdin_file.string();
-            
-            if (abs_stdin_file_str != "" && !fs::exists(abs_stdin_file)) 
-                 error("stdin file not found: " + cmds[i].stdin_file.string());
-
             if (abs_stdin_file_str != "") {
                 in_handle = CreateFileA(abs_stdin_file_str.c_str(), GENERIC_READ, 0, &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
                 ASSERT_WINAPI(in_handle != INVALID_HANDLE_VALUE);
@@ -564,9 +580,6 @@ vector<int> chain_commands(vector<Command> cmds, vector<Process>* async) {
         }
         
         if (is_last) {
-            fs::path abs_stdout_file = canonize_path(cmds[i].stdout_file, false, true);
-            string abs_stdout_file_str = abs_stdout_file.string();
-
             if (abs_stdout_file_str != "") {
                 out_handle = CreateFileA(abs_stdout_file_str.c_str(), GENERIC_WRITE, 0, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
                 ASSERT_WINAPI(out_handle != INVALID_HANDLE_VALUE);

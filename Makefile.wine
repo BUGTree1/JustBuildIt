@@ -1,19 +1,37 @@
-CXX = WINEDEBUG=fixme-all wine /opt/msvc/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe
-CXXFLAGS = /I src /I Z:\opt\msvc\VC\Tools\MSVC\14.44.35207\include /Wall /O2
+WINE = WINEDEBUG=fixme-all wine
+
+CXX = cl.exe
+CXX_FLAGS = /I src /W4 /O2 /std:c++17 /EHsc /Z7
+LINKER = link.exe
 
 OUT_DIR    = bin
 CXX_SRC    = src/helper.cpp
+CXX_OBJ    = $(OUT_DIR)/helper.obj
 CXX_OUT    = $(OUT_DIR)/buildit.exe
 
 LIB_SRC    = src/buildit.cpp
+LIB_OBJ    = $(OUT_DIR)/buildit.obj
 LIB_HEADER = src/buildit.h
+
+OUT_DIR_WIN    = $(subst /,\\,$(OUT_DIR))
+CXX_SRC_WIN    = $(subst /,\\,$(CXX_SRC))
+LIB_SRC_WIN    = $(subst /,\\,$(LIB_SRC))
+CXX_OBJ_WIN    = $(subst /,\\,$(CXX_OBJ))
+LIB_OBJ_WIN    = $(subst /,\\,$(LIB_OBJ))
+CXX_OUT_WIN    = $(subst /,\\,$(CXX_OUT))
 
 .PHONY: test
 test: $(CXX_OUT)
-	WINEDEBUG=fixme-all wine $(CXX_OUT) -t c test
+	$(WINE) $(CXX_OUT_WIN) -t c test
 
-$(CXX_OUT): $(LIB_SRC) $(LIB_HEADER) $(CXX_SRC) $(OUT_DIR)
-	$(CXX) $(CXXFLAGS) $(CXX_SRC) $(LIB_SRC) /Fe: $(CXX_OUT)
+$(CXX_OUT): $(OUT_DIR) $(LIB_OBJ) $(CXX_OBJ)
+	$(WINE) $(LINKER) /OUT:$(CXX_OUT_WIN) $(LIB_OBJ_WIN) $(CXX_OBJ_WIN)
+	
+$(CXX_OBJ): $(CXX_SRC) $(OUT_DIR)
+	$(WINE) $(CXX) /c $(CXX_FLAGS) /Fo: $(CXX_OBJ_WIN) $(CXX_SRC_WIN)
+	
+$(LIB_OBJ): $(LIB_SRC) $(OUT_DIR)
+	$(WINE) $(CXX) /c $(CXX_FLAGS) /Fo: $(LIB_OBJ_WIN) $(LIB_SRC_WIN)
 
 $(OUT_DIR):
 	mkdir $(OUT_DIR) || echo directory bin created

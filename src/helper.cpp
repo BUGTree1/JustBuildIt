@@ -16,11 +16,9 @@ using namespace buildit;
 #endif
 
 int main() {
-    BUILDIT_DEBUG_BOOL;
-    
-    execute_cmd({"mkdir", {"test"}});
-    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"src/buildit.cpp"}, {"test/test"}, {"src"}, true, OPTIMIZATION_SPEED, true, true));
-    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"src/helper.cpp"}, {"test/test2"}, {"src"}, true, OPTIMIZATION_SPEED, true, true));
-    execute_cmd(get_link_cmd(find_cxx_linker(), "test/test", {"test/test", "test/test2"}, {}, {}, true, OPTIMIZATION_SPEED));
+    execute_cmd({get_system_shell(), {BUILDIT_OS_ARG_CHAR "c", "mkdir", "test"}});
+    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"src/buildit.cpp"}, "test/test", {"src"}, true, OPTIMIZATION_SPEED, true, 17, true, true, true));
+    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"src/helper.cpp"}, "test/test2", {"src"}, true, OPTIMIZATION_SPEED, true, 17, true, true, true));
+    execute_cmd(get_link_cmd(find_cxx_linker(), "test/test", {"test/test", "test/test2"}, {}, {}, true, OPTIMIZATION_SPEED, true));
     return 0;
 }
