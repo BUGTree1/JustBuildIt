@@ -1,4 +1,3 @@
-#define BUILDIT_DEBUG
 #include "buildit.h"
 
 using namespace std;
@@ -15,10 +14,13 @@ using namespace buildit;
 #define PIPE_TEST_CMD "cat"
 #endif
 
+#define EXECUTE_IN_SHELL(cmd) execute_cmd({get_system_shell(), {BUILDIT_OS_ARG_CHAR "c", (cmd)}})
+
 int main() {
-    execute_cmd({get_system_shell(), {BUILDIT_OS_ARG_CHAR "c", "mkdir", "test"}});
-    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"src/buildit.cpp"}, "test/test", {"src"}, true, OPTIMIZATION_SPEED, true, 17, true, true, true));
-    execute_cmd(get_compile_cmd(find_cxx_compiler(), {"src/helper.cpp"}, "test/test2", {"src"}, true, OPTIMIZATION_SPEED, true, 17, true, true, true));
-    execute_cmd(get_link_cmd(find_cxx_linker(), "test/test", {"test/test", "test/test2"}, {}, {}, true, OPTIMIZATION_SPEED, true));
+    create_clangd_settings(".", true, {"XPP", "ABC", "696969"}, 23, true, true);
+    execute_cmd(get_compile_cmd(find_compiler(true), {"../src/buildit.cpp"}, "test", {"../src"}, true, OPTIMIZATION_SPEED, true, 17, true, true, true));
+    execute_cmd(get_compile_cmd(find_compiler(true), {"../src/helper.cpp"}, "test2", {"../src"}, true, OPTIMIZATION_SPEED, true, 17, true, true, true));
+    execute_cmd(get_link_cmd(find_compiler(true), "test", {"test", "test2"}, {}, {}, true, OPTIMIZATION_SPEED, true));
+    EXECUTE_IN_SHELL("echo DONE!");
     return 0;
 }

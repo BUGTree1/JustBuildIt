@@ -61,6 +61,16 @@
 #define BUILDIT_OS_SSE
 #endif
 
+#if defined(__clang__)
+#define BUILDIT_COMPILER_CLANG
+#endif
+#if defined(__GNUC__)
+#define BUILDIT_COMPILER_GCC
+#endif
+#if defined(_MSC_VER)
+#define BUILDIT_COMPILER_MSVC
+#endif
+
 #ifdef BUILDIT_OS_WINDOWS
 
 #define _CRT_SECURE_NO_WARNINGS
@@ -101,16 +111,9 @@
 #include <cstring>
 #include <filesystem>
 
+#define UNUSED(v) ((void)v)
 #define ASSERT_ERRNO(v) if(!(v)) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" Errno: ") + to_string(errno) + " - " + strerror(errno));
-#define ASSERT_TRUE(v, err_msg) { long long assert_ret_val = (v); if(assert_ret_val) buildit::error(/*string(__FILE__) + ":" + to_string(__LINE__) + */string(" Returned: ") + to_string(assert_ret_val) + string(" ") + (err_msg));}
-
-#ifndef BUILDIT_DEBUG_BOOL
-#ifdef BUILDIT_DEBUG
-#define BUILDIT_DEBUG_BOOL true
-#else
-#define BUILDIT_DEBUG_BOOL false
-#endif
-#endif
+#define ASSERT_TRUE(v, err_msg) { long long assert_ret_val = (v); if(assert_ret_val) buildit::error(string(__FILE__) + ":" + to_string(__LINE__) + string(" Returned: ") + to_string(assert_ret_val) + string(" ") + (err_msg));}
 
 namespace buildit {
 
@@ -148,13 +151,16 @@ struct Process {
     #endif
 };
 
-// The compilers and linkers can be specified to e.g. override the priority. Always the first ones have priority.
-fs::path find_c_compiler(std::vector<fs::path> compilers = {});
-fs::path find_cxx_compiler(std::vector<fs::path> compilers = {});
+// Set debug true to enable verbose logging
+void set_debug(bool debug);
+bool get_debug();
 
-fs::path find_c_linker(std::vector<fs::path> linkers = {});
-fs::path find_cxx_linker(std::vector<fs::path> linkers = {});
-fs::path find_linker(std::vector<fs::path> linkers = {});
+fs::path find_compiler(bool cxx);
+fs::path find_linker();
+
+// Pass argv and argc to rebuild file with same name + .cpp with the same compiler as this is compiled with
+void rebuild_yourself(char** argv, int argc);
+void rebuild_yourself_verbose(fs::path exe_path, fs::path compiler = find_compiler(true));
 
 // auto_extensions automatically append .obj for object files and .exe to executable on windows and .o for object and nothing for executable on other platforms
 Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, fs::path object, std::vector<fs::path> include_dirs = {}, bool auto_extensions = true, Optimization_Level optimize = OPTIMIZATION_NONE, bool debug = false, int version = 17, bool all_warnings = false, bool pedantic = false, bool native_arch = false);
@@ -168,12 +174,12 @@ int wait_for_process(Process process);
 std::vector<int> execute_cmds(std::vector<Command> cmds, std::vector<Process>* async = NULL);
 std::vector<int> wait_for_processes(std::vector<Process> processes);
 
-// chain commands so ones stdout is connected to the next ones stdin than wait for all them to exit. Returns the vector of all exit codes.
+// Chain commands so ones stdout is connected to the next ones stdin than wait for all them to exit. Returns the vector of all exit codes.
 std::vector<int> chain_commands(std::vector<Command> cmds, std::vector<Process>* async = NULL);
 
-//create settings with e.g. include directories
-void create_vscode_settings(std::string cmd, fs::path dir);
-void create_clangd_settings(std::string cmd, fs::path dir);
+// Create settings for ClangD with e.g. include directories
+// dir is the directory where clangd settings should be located
+void create_clangd_settings(fs::path dir, bool cxx, std::vector<fs::path> include_dirs = {}, int version = 17, bool all_warnings = false, bool pedantic = false);
 
 // Find executable file/program in environment variable PATH 
 fs::path find_in_env_path(fs::path filename, bool search_working_dir = true);

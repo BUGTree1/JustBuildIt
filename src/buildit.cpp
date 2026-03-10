@@ -5,6 +5,15 @@ using namespace std;
 
 namespace buildit {
 
+static bool global_debug = false;
+
+void set_debug(bool debug){
+    global_debug = debug;
+}
+bool get_debug(){
+    return global_debug;
+}
+
 Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, fs::path object, std::vector<fs::path> include_dirs, bool auto_extensions, Optimization_Level optimize, bool debug, int version, bool all_warnings, bool pedantic, bool native_arch) {
     std::vector<fs::path> abs_source_files = canonize_paths(source_files, false, true);
     std::vector<fs::path> abs_include_dirs = canonize_paths(include_dirs, false, true);
@@ -19,6 +28,7 @@ Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, f
     
     Command cmd = {abs_compiler, vector<string>()};
     if (contains(compiler_name, "cl.exe")){
+        cmd.arguments.push_back("/nologo");
         cmd.arguments.push_back("/c");
         cmd.arguments.push_back("/EHsc");
         cmd.arguments.push_back("/Z7");
@@ -108,12 +118,12 @@ Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path
         abs_output_file = fs::path(abs_output_file.string() + BUILDIT_OS_EXE_EXTENSION);
     }
     
-    if(!linker.has_filename()) error("The linker doesent have a filename!");
     fs::path abs_linker = canonize_path(linker, true);
     string linker_name = to_lower(abs_linker.filename().string());
     
     Command cmd = {abs_linker, vector<string>()};
     if (contains(linker_name, "link.exe")){
+        cmd.arguments.push_back("/NOLOGO");
         cmd.arguments.push_back("/OUT:" + abs_output_file.string());
         if(debug) cmd.arguments.push_back("/DEBUG:FULL");
         else  cmd.arguments.push_back("/DEBUG:NONE");
@@ -173,55 +183,56 @@ Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path
     return cmd;
 }
 
-void create_vscode_settings(std::string cmd, fs::path dir) {
-    todo("create_vscode_settings");
-    //NOW
-}
-void create_clangd_settings(std::string cmd, fs::path dir) {
-    todo("create_clangd_settings");
-    //NOW
+void create_clangd_settings(fs::path dir, bool cxx, std::vector<fs::path> include_dirs, int version, bool all_warnings, bool pedantic) {
+    if(get_debug()) {
+        string debug_msg = "Creating ClangD settings in directory: \"" + dir.string() + "\" with include dirs: [";
+        for(size_t i = 0; i < include_dirs.size(); i++) {
+            if(i > 0) debug_msg += ", ";
+            debug_msg += "\"" + include_dirs[i].string() + "\"";
+        }
+        debug_msg += string("] ") + (cxx ? "c++" : "c") + " version: \"" + to_string(version) + "\" all warnings: \"" + (all_warnings ? "true" : "false") + "\" pedantic: \"" + (pedantic ? "true" : "false") + "\"";
+        log(LOG_LEVEL_DEBUG, debug_msg);
+    }
+    
+    vector<string> add_flags = vector<string>();
+    for(size_t i = 0; i < include_dirs.size(); i++) {
+        add_flags.push_back("\"-I" + include_dirs[i].string() + "\"");
+    }
+    if(cxx) add_flags.push_back("-std=c++" + to_string(version));
+    else add_flags.push_back("-std=c" + to_string(version));
+    if(all_warnings) {
+        add_flags.push_back("-Wall");
+        add_flags.push_back("-Wextra");
+    }
+    if(pedantic) add_flags.push_back("-pedantic");
+    
+    ofstream config_file = ofstream(canonize_path(dir) / ".clangd", ofstream::binary);
+    config_file << "CompileFlags:\n    Compiler: ";
+    config_file << (cxx ? "\"clang++\"" : "\"clang\"") << "\n";
+    config_file << "    Add: [" << concat_str_vec(add_flags, ", ") << "]\n";
 }
 
-fs::path find_c_compiler(vector<fs::path> compilers){
-    if(compilers.size() == 0) {
-        compilers = vector<fs::path>({"gcc", "clang", "cl.exe"});
-    }
-    fs::path compiler = find_first_in_env_path(compilers);
-    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Found C compiler: " + compiler.string());
-    return compiler;
+fs::path find_compiler(bool cxx){
+    #if defined(BUILDIT_COMPILER_CLANG)
+    if(cxx) return find_in_env_path("clang++");
+    else return find_in_env_path("clang");
+    #elif defined(BUILDIT_COMPILER_GCC)
+    if(cxx) return find_in_env_path("g++");
+    else return find_in_env_path("gcc");
+    #elif defined(BUILDIT_COMPILER_MSVC)
+    return find_in_env_path("cl");
+    #endif
+    error("Could not find the compiler this is compiled with!");
+    return "";
 }
-fs::path find_cxx_compiler(vector<fs::path> compilers){
-    if(compilers.size() == 0) {
-        compilers = vector<fs::path>({"g++", "clang++", "cl.exe"});
-    }
-    fs::path compiler = find_first_in_env_path(compilers);
-    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Found C++ compiler: " + compiler.string());
-    return compiler;
-}
-
-fs::path find_c_linker(vector<fs::path> linkers){
-    if(linkers.size() == 0) {
-        linkers = vector<fs::path>({"gcc", "clang", "link.exe"});
-    }
-    fs::path linker = find_first_in_env_path(linkers);
-    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Found C linker: " + linker.string());
-    return linker;
-}
-fs::path find_cxx_linker(vector<fs::path> linkers){
-    if(linkers.size() == 0) {
-        linkers = vector<fs::path>({"g++", "clang++", "link.exe"});
-    }
-    fs::path linker = find_first_in_env_path(linkers);
-    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Found C++ linker: " + linker.string());
-    return linker;
-}
-fs::path find_linker(vector<fs::path> linkers){
-    if(linkers.size() == 0) {
-        linkers = vector<fs::path>({"ld", "lld", "link.exe"});
-    }
-    fs::path linker = find_first_in_env_path(linkers);
-    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Found linker: " + linker.string());
-    return linker;
+fs::path find_linker(){
+    #if defined(BUILDIT_COMPILER_CLANG)
+    return find_in_env_path("lld");
+    #elif defined(BUILDIT_OS_WINDOWS)
+    return find_in_env_path("link");
+    #else
+    return find_in_env_path("ld");
+    #endif
 }
 
 bool contains(std::string str, std::string token){
@@ -300,7 +311,10 @@ fs::path find_in_env_path(fs::path filename, bool search_working_dir){
     for(size_t i = 0; i < path_dirs.size(); i++) {
         for(fs::directory_entry const& file : fs::directory_iterator(path_dirs[i])){
             if(file.exists() && !file.is_directory()) {
-                if(file.path().filename() == filename) return file.path();
+                #if defined(BUILDIT_OS_WINDOWS)
+                if(file.path().filename().string() == filename.string() + ".exe") return file.path();
+                #endif
+                if(file.path().filename().string() == filename.string()) return file.path();
             }
         }
     }
@@ -350,7 +364,7 @@ std::vector<fs::path> replace_extensions(std::vector<fs::path> files, fs::path e
 fs::path get_system_shell(){
     vector<fs::path> shells = vector<fs::path>({"bash", "cmd.exe", "zsh", "fish", "dash", "tcsh", "csh", "ksh", "sh"});
     fs::path shell = find_first_in_env_path(shells);
-    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Found system shell: " + shell.string());
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Found system shell: " + shell.string());
     return shell;
 }
 
@@ -438,7 +452,7 @@ int execute_cmd(Command cmd, vector<Process>* async){
     fs::path abs_working_dir = canonize_path(cmd.working_dir);
     fs::path prev_working_dir = fs::current_path();
     
-    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Executing: \"" + abs_executable.string() + " " + concat_str_vec(cmd.arguments, " ") + "\" At: \"" + abs_working_dir.string()
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Executing: \"" + abs_executable.string() + " " + concat_str_vec(cmd.arguments, " ") + "\" At: \"" + abs_working_dir.string()
      + "\" With stdin as: \"" + abs_stdin_file_str + "\" With stdout as: \"" + abs_stdout_file_str + "\" With stderr as: \"" + abs_stderr_file_str + "\"");
     
     fs::current_path(abs_working_dir);
@@ -456,7 +470,6 @@ int execute_cmd(Command cmd, vector<Process>* async){
     HANDLE in_file  = NULL;
     HANDLE out_file = NULL;
     HANDLE err_file = NULL;
-    cout << abs_stdin_file_str << endl;
     if (abs_stdin_file_str  != "") in_file  = CreateFileA(abs_stdin_file_str.c_str(),  GENERIC_READ,  0, &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (abs_stdout_file_str != "") out_file = CreateFileA(abs_stdout_file_str.c_str(), GENERIC_WRITE, 0, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (abs_stderr_file_str != "") err_file = CreateFileA(abs_stderr_file_str.c_str(), GENERIC_WRITE, 0, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -529,7 +542,7 @@ vector<int> chain_commands(vector<Command> cmds, vector<Process>* async) {
     string abs_stdin_file_str  = abs_stdin_file.string();
     string abs_stdout_file_str = abs_stdout_file.string();
     
-    if(BUILDIT_DEBUG_BOOL) { 
+    if(get_debug()) {
         string log_str = "Chaining: " + abs_stdin_file_str + " > ";
         for(size_t i = 0; i < cmds.size(); i++) {
             log_str += canonize_path(cmds[i].executable, true).string() + " " + concat_str_vec(cmds[i].arguments, " ");
@@ -643,8 +656,9 @@ vector<int> chain_commands(vector<Command> cmds, vector<Process>* async) {
     
     #else // !BUILDIT_OS_WINDOWS
     
-    int pipes[2][cmds.size() - 1];
+    int** pipes = (int**)malloc(sizeof(int*) * (cmds.size() - 1));
     for(size_t i = 0; i < cmds.size() - 1; i++) {
+        pipes[i] = (int*)malloc(sizeof(int) * 2);
         ASSERT_ERRNO(pipe(pipes[i]) != -1);
     }
     
@@ -701,7 +715,10 @@ vector<int> chain_commands(vector<Command> cmds, vector<Process>* async) {
         for(size_t j = 0; j < 2; j++) {
             ASSERT_ERRNO(close(pipes[i][j]) != -1);
         }
+        free(pipes[i]);
     }
+    
+    free(pipes);
     
     #endif // BUILDIT_OS_WINDOWS
     
@@ -713,7 +730,7 @@ vector<int> chain_commands(vector<Command> cmds, vector<Process>* async) {
 }
 int wait_for_process(Process process){
     #ifdef BUILDIT_OS_WINDOWS
-    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Waiting for process id: " + to_string(process.process.dwProcessId));
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Waiting for process id: " + to_string(process.process.dwProcessId));
     
     DWORD exit_code = 0;
     
@@ -726,7 +743,7 @@ int wait_for_process(Process process){
     return exit_code;
     
     #else // !BUILDIT_OS_WINDOWS
-    if(BUILDIT_DEBUG_BOOL) log(LOG_LEVEL_DEBUG, "Waiting for process id: " + to_string(process.pid));
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Waiting for process id: " + to_string(process.pid));
     
     int child_status = 0;
     ASSERT_ERRNO(waitpid(process.pid, &child_status, 0) != -1);

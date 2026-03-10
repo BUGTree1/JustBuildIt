@@ -13,7 +13,7 @@ Is a simple build system for C/C++ made in C++ that:
 - Recompiles itself when modified
 - Is crossplatform
 - Is multithreaded
-- Can automatically create configs for vscode and clangd
+- Can automatically create configs for clangd
 
 Also has a helper app that:
 - Can build a project without any arguments in one command

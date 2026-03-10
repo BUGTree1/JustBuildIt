@@ -1,31 +1,14 @@
-DONE:
-- REWRITE in OS API (posix, windows, maybe macos?)
-- Write WinAPI bindings
-- rewrite get_current_executable_path to support all oses
-
 TODO:
-
-SIMPLIFY FINDING COMPILERS and LINKERS
-CONFIGS GENERATORS
-
-- maybe linux refactor
-- debugging enable
 - try to break (e.g. set all arguments to NULL, 0 or empty array or string)
-- Do something about warning, error, todo (Logging system but with exits like error?)
-- Add compiler and other stuff to create_clangd_settings
 - Incremental build (function for checking if file needs to be rebuilt)
-- function to build all .c or .cpp files from folder (incrementally) (auto mode)
+- function to build all .c or .cpp files from folder (incrementally) (auto mode) + grep all .c or .cpp files for headers in
+src folder and check if they need to be rebuilt
 - Multithreading
-- progressbar
-in this auto function to test if file needs to be rebuilt because of a header just "grep" all files 
-in this folder and if its in there than check it for rebuild
-
+- Progressbar
 - rebuild yourself
 - git helper
 - templater
 
-- ALL CODE TODO COMMENTS
-
 - Add some examples in comments
 
-- Test on linux, window, macos, BSD
+- Test on Linux, Windows, MacOS, BSD

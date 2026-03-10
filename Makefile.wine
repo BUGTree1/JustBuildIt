@@ -1,7 +1,7 @@
 WINE = WINEDEBUG=fixme-all wine
 
 CXX = cl.exe
-CXX_FLAGS = /I src /W4 /O2 /std:c++17 /EHsc /Z7
+CXX_FLAGS = /nologo /I src /W4 /O2 /std:c++17 /EHsc /Z7
 LINKER = link.exe
 
 OUT_DIR    = bin
@@ -13,19 +13,25 @@ LIB_SRC    = src/buildit.cpp
 LIB_OBJ    = $(OUT_DIR)/buildit.obj
 LIB_HEADER = src/buildit.h
 
-OUT_DIR_WIN    = $(subst /,\\,$(OUT_DIR))
-CXX_SRC_WIN    = $(subst /,\\,$(CXX_SRC))
-LIB_SRC_WIN    = $(subst /,\\,$(LIB_SRC))
-CXX_OBJ_WIN    = $(subst /,\\,$(CXX_OBJ))
-LIB_OBJ_WIN    = $(subst /,\\,$(LIB_OBJ))
-CXX_OUT_WIN    = $(subst /,\\,$(CXX_OUT))
+TEST_DIR   = test
 
-.PHONY: test
-test: $(CXX_OUT)
-	$(WINE) $(CXX_OUT_WIN) -t c test
+OUT_DIR_WIN  = $(subst /,\\,$(OUT_DIR))
+CXX_SRC_WIN  = $(subst /,\\,$(CXX_SRC))
+LIB_SRC_WIN  = $(subst /,\\,$(LIB_SRC))
+CXX_OBJ_WIN  = $(subst /,\\,$(CXX_OBJ))
+LIB_OBJ_WIN  = $(subst /,\\,$(LIB_OBJ))
+CXX_OUT_WIN  = $(subst /,\\,$(CXX_OUT))
+TEST_DIR_WIN = $(subst /,\\,$(TEST_DIR))
+
+.PHONY: run
+run: build $(TEST_DIR)
+	cd $(TEST_DIR_WIN) ; $(WINE) ../$(CXX_OUT) -t c test
+	
+.PHONY: build
+build: $(CXX_OUT)
 
 $(CXX_OUT): $(OUT_DIR) $(LIB_OBJ) $(CXX_OBJ)
-	$(WINE) $(LINKER) /OUT:$(CXX_OUT_WIN) $(LIB_OBJ_WIN) $(CXX_OBJ_WIN)
+	$(WINE) $(LINKER) /NOLOGO /OUT:$(CXX_OUT_WIN) $(LIB_OBJ_WIN) $(CXX_OBJ_WIN)
 	
 $(CXX_OBJ): $(CXX_SRC) $(OUT_DIR)
 	$(WINE) $(CXX) /c $(CXX_FLAGS) /Fo: $(CXX_OBJ_WIN) $(CXX_SRC_WIN)
@@ -34,4 +40,7 @@ $(LIB_OBJ): $(LIB_SRC) $(OUT_DIR)
 	$(WINE) $(CXX) /c $(CXX_FLAGS) /Fo: $(LIB_OBJ_WIN) $(LIB_SRC_WIN)
 
 $(OUT_DIR):
-	mkdir $(OUT_DIR) || echo directory bin created
+	mkdir $(OUT_DIR_WIN) || echo $(OUT_DIR_WIN) created
+	
+$(TEST_DIR):
+	mkdir $(TEST_DIR_WIN) || echo $(TEST_DIR_WIN) created
