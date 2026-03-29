@@ -1,5 +1,5 @@
 TODO:
-- try to break (e.g. set all arguments to NULL, 0 or empty array or string)
+- Make execute_cmd take the stdin and output the stdout/err and with that make chain_cmds
 - Incremental build (function for checking if file needs to be rebuilt)
 - function to build all .c or .cpp files from folder (incrementally) (auto mode) + grep all .c or .cpp files for headers in
 src folder and check if they need to be rebuilt
@@ -8,6 +8,10 @@ src folder and check if they need to be rebuilt
 - rebuild yourself
 - git helper
 - templater
+- try to break (e.g. set all arguments to NULL, 0 or empty array or string)
+
+- REWRITE IN C not C++
+- dynamic arrays like nob but generic with e.g. DA(int) -> int* (signyfing that its a dynamic array not just a pointer)
 
 - Add some examples in comments
 
