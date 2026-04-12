@@ -1,5 +1,6 @@
 TODO:
-- Make execute_cmd take the stdin and output the stdout/err and with that make chain_cmds
+- Fix pipes and execution
+- Make find_compiler find the compiler compiling buildit
 - Incremental build (function for checking if file needs to be rebuilt)
 - function to build all .c or .cpp files from folder (incrementally) (auto mode) + grep all .c or .cpp files for headers in
 src folder and check if they need to be rebuilt
@@ -8,6 +9,7 @@ src folder and check if they need to be rebuilt
 - rebuild yourself
 - git helper
 - templater
+- fix all todos
 - try to break (e.g. set all arguments to NULL, 0 or empty array or string)
 
 - REWRITE IN C not C++
