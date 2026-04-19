@@ -14,8 +14,8 @@ src folder and check if they need to be rebuilt
 
 - REWRITE IN C not C++
 - dynamic arrays like nob but generic with e.g. DA(int) -> int* (signyfing that its a dynamic array not just a pointer)
-- linked list
-- linked list arrays (linked list of arrays of init time defined lenght)
+- unordered DA e.g. UDA(int)
+- linked list e.g. LL(int)
 
 - Add some examples in comments
 
