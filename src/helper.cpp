@@ -24,7 +24,11 @@ int main() {
     //execute_cmd(get_compile_cmd(find_compiler(true), {"../src/helper.cpp"}, "test2", {"../src"}, true, OPTIMIZATION_SPEED, true, 17, true, true, true));
     //execute_cmd(get_link_cmd(find_compiler(true), "test", {"test", "test2"}, {}, {}, true, OPTIMIZATION_SPEED, true));
 
-    chain_cmds({default_command("cat",{},"",pipe_from_file("stdin.txt")), default_command("cat"), default_command("cat",{},"", pipe_stdin(), pipe_to_file("stdout.txt"))});
+    chain_cmds({
+        default_command("cat", {}, "",               pipe_from_file("stdin.txt")),
+        default_command("cat"),
+        default_command("cat", {}, "", pipe_stdin(), pipe_to_file("stdout.txt"))
+    });
     EXECUTE_IN_SHELL("echo DONE!");
     return 0;
 }

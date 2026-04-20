@@ -96,7 +96,7 @@ Pipe pipe_from_file_stream(FILE* stream_in, FILE* stream_out) {
     if (stream_out != NULL ) {
         int fd = _fileno(stream_out);
         p.write_handle = (HANDLE)_get_osfhandle(fd);
-        ASSERT_WINAPI(p.read_handle != INVALID_HANDLE_VALUE);
+        ASSERT_WINAPI(p.write_handle != INVALID_HANDLE_VALUE);
     }
     #else
     if (stream_in != NULL ) {
@@ -416,10 +416,11 @@ int execute_cmd(Command cmd, vector<Process>* async){
         if (local_pipes[1].write_fd > -1) dup2(local_pipes[1].write_fd, STDOUT_FILENO);
         if (local_pipes[2].write_fd > -1) dup2(local_pipes[2].write_fd, STDERR_FILENO);
 
-        // TODO: is this good?
-        //for (int i = 0; i < 3; ++i) {
-        //    close_pipe(local_pipes[i]);
-        //}
+        // Close original pipe FDs in child so it doesn't hold extra references, 
+        // which prevents EOF propagation and causes deadlocks.
+        for (int i = 0; i < 3; ++i) {
+            close_pipe(local_pipes[i]);
+        }
 
         ASSERT_ERRNO(execv(abs_executable_string.c_str(), executable_args) != -1);
         exit(0);
@@ -495,13 +496,14 @@ vector<int> chain_cmds(vector<Command> cmds, vector<Process>* async) {
         if(i < cmds.size() - 1) cmds[i].out_pipe = pipes[i];
         returns.push_back(execute_cmd(cmds[i], IF_NULL(async, &async_local, async)));
     }
+    // Close intermediate pipes immediately in parent to allow EOF to propagate to children.
+    // If we don't do this, the children reading from these pipes will hang waiting for more input.
+    for(size_t i = 0; i < pipes.size(); i++) {
+        close_pipe(pipes[i]);
+    }
     if(async == NULL) {
         returns = wait_for_processes(async_local);
     }
-    // TODO: If async then should this be here or after wait? 
-    //for(size_t i = 0; i < pipes.size(); i++) {
-    //    close_pipe(pipes[i]);
-    //}
     return returns;
 }
 Process get_current_process() {
@@ -612,7 +614,7 @@ fs::path get_current_executable_path() {
     #elif defined(BUILDIT_OS_LINUX) || defined(BUILDIT_OS_SOLARIS) || defined(BUILDIT_OS_BSD) || defined(BUILDIT_PROCFS)
         char exe_path[FILENAME_MAX];
         vector<fs::path> self_exe_paths = vector<fs::path>({"/proc/self/exe", "/proc/self/path/a.out", "/proc/curproc/file", "/proc/curproc/exe"});
-        for(size_t i = 0; self_exe_paths.size(); i++) {
+        for(size_t i = 0; i < self_exe_paths.size(); i++) {
             if(fs::exists(self_exe_paths[i])){
                 string self_exe_path_str = self_exe_paths[i].string();
                 ssize_t count = readlink(self_exe_path_str.c_str(), exe_path, FILENAME_MAX);
@@ -748,7 +750,7 @@ string concat_str_vec(vector<string> vec, string delim){
     return str;
 }
 char** str_vec_to_cstr_arr(vector<string> vec){
-    char** cstr_arr = (char**)malloc((vec.size() + 1) * sizeof(char**));
+    char** cstr_arr = (char**)malloc((vec.size() + 1) * sizeof(char*));
     for (size_t i = 0; i < vec.size(); i++){
         size_t cstr_size = vec[i].size() * sizeof(char);
         char* cstr = (char*)malloc(cstr_size + (1 * sizeof(char)));
@@ -818,14 +820,14 @@ string command_to_cmd_line(Command cmd){
 }
 #else // !BUILDIT_OS_WINDOWS
 void dup_and_close_fd(int src_fd, int dest_fd, bool ok_if_invalid) {
-    if (ok_if_invalid) {
-        if(src_fd != -1 || dest_fd != -1) {
+    if(src_fd == -1 || dest_fd == -1) {
+        if (ok_if_invalid) {
             return;
+        } else {
+            error("dup_and_close_fd got invalid fd!");
         }
     }
 
-    ASSERT_ERRNO(src_fd != -1);
-    ASSERT_ERRNO(dest_fd != -1);
     ASSERT_ERRNO(dup2(src_fd, dest_fd) != -1);
     ASSERT_ERRNO(close(src_fd) != -1);
 }
