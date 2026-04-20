@@ -170,17 +170,17 @@ struct Command {
     fs::path executable;
     std::vector<std::string> arguments;
     fs::path working_dir;
-    Pipe stdin;
-    Pipe stdout;
-    Pipe stderr;
+    Pipe in_pipe;
+    Pipe out_pipe;
+    Pipe err_pipe;
 };
 
 struct Process {
     #ifdef BUILDIT_OS_WINDOWS
-    PROCESS_INFORMATION process;
+    PROCESS_INFORMATION pi;
     #else
-    char** executable_args;
     pid_t pid;
+    char** executable_args;
     #endif
 };
 
@@ -239,7 +239,7 @@ Command get_compile_cmd(fs::path compiler, std::vector<fs::path> source_files, f
 Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path> objects, std::vector<fs::path> libraries, std::vector<fs::path> library_dirs, bool auto_extensions = true, Optimization_Level optimize = OPTIMIZATION_NONE, bool debug = false);
 
 //////////////////////////////////////////////////////////////////////
-// Executing commands
+// Executing/Waiting/Getting processes
 // \/
 //////////////////////////////////////////////////////////////////////
 
@@ -255,6 +255,9 @@ std::vector<int> wait_for_processes(std::vector<Process> processes);
 
 // Chain commands so ones stdout is connected to the next ones stdin.
 std::vector<int> chain_cmds(std::vector<Command> cmds, std::vector<Process>* async = NULL);
+
+// Get the current running process
+Process get_current_process();
 
 //////////////////////////////////////////////////////////////////////
 // Auto creating ide/editor/lsp settings files
@@ -318,6 +321,7 @@ std::vector<T> concat_vec(std::vector<T> vec1, std::vector<T> vec2){
 
 std::string as_string(Pipe pipe);
 std::string as_string(Command cmd);
+std::string as_string(Process process);
 std::string to_lower(std::string str);
 std::string to_upper(std::string str);
 bool contains(std::string str, std::string token);

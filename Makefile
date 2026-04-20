@@ -13,7 +13,7 @@ TEST_DIR   = test
 
 .PHONY: run
 run: build $(TEST_DIR)
-	cd $(TEST_DIR) ; ../$(CXX_OUT) -t c test
+	cd $(TEST_DIR) ; rm stdout.txt ; ../$(CXX_OUT) -t c test
 
 .PHONY: build
 build: $(LIB_OUT) $(CXX_OUT)

@@ -19,6 +19,122 @@ bool get_debug(){
 }
 
 //////////////////////////////////////////////////////////////////////
+// Piping
+// \/
+//////////////////////////////////////////////////////////////////////
+
+Pipe open_pipe(){
+    Pipe p = pipe_invalid();
+#ifdef BUILDIT_OS_WINDOWS
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = NULL;
+    
+    ASSERT_WINAPI(CreatePipe(&p.read_handle, &p.write_handle, &sa, 0));
+#else
+    int fds[2];
+    ASSERT_ERRNO(pipe(fds) == 0);
+    p.read_fd = fds[0];
+    p.write_fd = fds[1];
+#endif
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Opened pipe: \"" + as_string(p) + "\"");
+    return p;
+}
+void close_pipe(Pipe pipe) {
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Closing pipe: \"" + as_string(pipe) + "\"");
+    #ifdef BUILDIT_OS_WINDOWS
+    if (pipe.read_handle != INVALID_HANDLE_VALUE && pipe.read_handle != NULL) {
+        CloseHandle(pipe.read_handle);
+    }
+    if (pipe.write_handle != INVALID_HANDLE_VALUE && pipe.write_handle != NULL) {
+        CloseHandle(pipe.write_handle);
+    }
+    #else
+    if (pipe.read_fd > -1) close(pipe.read_fd);
+    if (pipe.write_fd > -1) close(pipe.write_fd);
+    #endif
+}
+Pipe pipe_to_file(fs::path file) {
+    fs::path abs_file = canonize_path(file);
+    Pipe p = pipe_invalid();
+#ifdef BUILDIT_OS_WINDOWS
+    p.read_handle = INVALID_HANDLE_VALUE;
+    p.write_handle = CreateFileA(abs_file.string().c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    ASSERT_WINAPI(p.write_handle != INVALID_HANDLE_VALUE);
+#else
+    p.read_fd = -1;
+    p.write_fd = open(abs_file.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    ASSERT_ERRNO(p.write_fd > -1);
+#endif
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Opened pipe to file: \"" + abs_file.string() + "\" : \"" + as_string(p) + "\"");
+    return p;
+}
+Pipe pipe_from_file(fs::path file) {
+    fs::path abs_file = canonize_path(file);
+    Pipe p = pipe_invalid();
+#ifdef BUILDIT_OS_WINDOWS
+    p.write_handle = INVALID_HANDLE_VALUE;
+    p.read_handle = CreateFileA(abs_file.string().c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    ASSERT_WINAPI(p.read_handle != INVALID_HANDLE_VALUE);
+#else
+    p.write_fd = -1;
+    p.read_fd = open(abs_file.string().c_str(), O_RDONLY);
+    ASSERT_ERRNO(p.read_fd > -1);
+#endif
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Opened pipe from file: \"" + abs_file.string() + "\" : \"" + as_string(p) + "\"");
+    return p;
+}
+Pipe pipe_from_file_stream(FILE* stream_in, FILE* stream_out) {
+    Pipe p = pipe_invalid();
+    #ifdef BUILDIT_OS_WINDOWS
+    if (stream_in != NULL ) {
+        int fd = _fileno(stream_in);
+        p.read_handle = (HANDLE)_get_osfhandle(fd);
+        ASSERT_WINAPI(p.read_handle != INVALID_HANDLE_VALUE);
+    }
+    if (stream_out != NULL ) {
+        int fd = _fileno(stream_out);
+        p.write_handle = (HANDLE)_get_osfhandle(fd);
+        ASSERT_WINAPI(p.read_handle != INVALID_HANDLE_VALUE);
+    }
+    #else
+    if (stream_in != NULL ) {
+        p.read_fd = fileno(stream_in);
+        ASSERT_ERRNO(p.read_fd > -1);
+    }
+    if (stream_out != NULL ) {
+        p.write_fd = fileno(stream_out);
+        ASSERT_ERRNO(p.write_fd > -1);
+    }
+    #endif
+    return p;
+}
+Pipe pipe_stdin(){
+    return pipe_from_file_stream(stdin,  NULL);
+}
+Pipe pipe_stdout(){
+    return pipe_from_file_stream(stdout, NULL);
+}
+Pipe pipe_stderr(){
+    return pipe_from_file_stream(stderr, NULL);
+}
+Pipe pipe_invalid(){
+    #ifdef BUILDIT_OS_WINDOWS
+    return LIT(Pipe){INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE};
+    #else
+    return LIT(Pipe){-1, -1};
+    #endif
+}
+bool is_pipe_invalid(Pipe pipe) {
+    #ifdef BUILDIT_OS_WINDOWS
+    return pipe.write_handle == INVALID_HANDLE_VALUE && pipe.read_handle == INVALID_HANDLE_VALUE;
+    #else
+    return pipe.write_fd < 0 && pipe.read_fd < 0;
+    #endif
+}
+
+//////////////////////////////////////////////////////////////////////
 // Find common programs
 // \/
 //////////////////////////////////////////////////////////////////////
@@ -236,7 +352,7 @@ Command get_link_cmd(fs::path linker, fs::path output_file, std::vector<fs::path
 }
 
 //////////////////////////////////////////////////////////////////////
-// Executing commands
+// Executing/Waiting/Getting processes
 // \/
 //////////////////////////////////////////////////////////////////////
 
@@ -247,15 +363,13 @@ int execute_cmd(Command cmd, vector<Process>* async){
     fs::path abs_working_dir = canonize_path(cmd.working_dir);
     fs::path prev_working_dir = fs::current_path();
     
-    if(get_debug()) log(LOG_LEVEL_DEBUG, "Executing: \"" + as_string(LIT(Command){abs_executable, cmd.arguments, cmd.working_dir, cmd.stdin, cmd.stdout, cmd.stderr}) + "\"");
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Executing: \"" + as_string(LIT(Command){abs_executable, cmd.arguments, cmd.working_dir, cmd.in_pipe, cmd.out_pipe, cmd.err_pipe}) + "\"");
     
-    Pipe local_pipes[3] = {cmd.stdin, cmd.stdout, cmd.stderr};
-    bool owns_pipes[3] = {};
+    Pipe local_pipes[3] = {cmd.in_pipe, cmd.out_pipe, cmd.err_pipe};
 
     for (int i = 0; i < 3; ++i) {
         if (is_pipe_invalid(local_pipes[i])) {
-            local_pipes[i] = open_pipe();
-            owns_pipes[i] = true;
+            error(string("Invalid ") + (i == 0 ? "stdin" : (i == 1 ? "stdout" : (i == 2 ? "stderr" : ""))) + "pipe for process!");
         }
     }
 
@@ -272,19 +386,19 @@ int execute_cmd(Command cmd, vector<Process>* async){
     STARTUPINFOA si = {};
     si.cb = sizeof(si);
     si.dwFlags = STARTF_USESTDHANDLES;
-    si.hStdInput  = pipes[0].read_handle;
-    si.hStdOutput = pipes[1].write_handle;
-    si.hStdError  = pipes[2].write_handle;
+    si.hStdInput  = local_pipes[0].read_handle;
+    si.hStdOutput = local_pipes[1].write_handle;
+    si.hStdError  = local_pipes[2].write_handle;
     PROCESS_INFORMATION pi = {};
     ASSERT_WINAPI(CreateProcessA(NULL, cmd_line_cstr, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi) != 0);
 
-    if (pipes[0].read_handle != INVALID_HANDLE_VALUE)  CloseHandle(pipes[0].read_handle);
-    if (pipes[1].write_handle != INVALID_HANDLE_VALUE) CloseHandle(pipes[1].write_handle);
-    if (pipes[2].write_handle != INVALID_HANDLE_VALUE) CloseHandle(pipes[2].write_handle);
+    if (local_pipes[0].read_handle != INVALID_HANDLE_VALUE)  CloseHandle(local_pipes[0].read_handle);
+    if (local_pipes[1].write_handle != INVALID_HANDLE_VALUE) CloseHandle(local_pipes[1].write_handle);
+    if (local_pipes[2].write_handle != INVALID_HANDLE_VALUE) CloseHandle(local_pipes[2].write_handle);
 
-    pipes[0].read_handle = INVALID_HANDLE_VALUE;
-    pipes[1].write_handle = INVALID_HANDLE_VALUE;
-    pipes[2].write_handle = INVALID_HANDLE_VALUE;
+    local_pipes[0].read_handle = INVALID_HANDLE_VALUE;
+    local_pipes[1].write_handle = INVALID_HANDLE_VALUE;
+    local_pipes[2].write_handle = INVALID_HANDLE_VALUE;
     
     free(cmd_line_cstr);
     
@@ -298,33 +412,26 @@ int execute_cmd(Command cmd, vector<Process>* async){
     pid_t pid = fork();
     ASSERT_ERRNO(pid != -1);
     if(pid == 0) {
-        //dup_and_close_fd(cmd.stdin.read_fd,   STDIN_FILENO , true);
-        //dup_and_close_fd(cmd.stdout.write_fd, STDOUT_FILENO, true);
-        //dup_and_close_fd(cmd.stderr.write_fd, STDERR_FILENO, true);
         if (local_pipes[0].read_fd  > -1) dup2(local_pipes[0].read_fd,  STDIN_FILENO);
         if (local_pipes[1].write_fd > -1) dup2(local_pipes[1].write_fd, STDOUT_FILENO);
         if (local_pipes[2].write_fd > -1) dup2(local_pipes[2].write_fd, STDERR_FILENO);
 
-        // Close all pipe fds in child to prevent leaking
-        for (int i = 0; i < 3; ++i) {
-            close_pipe(local_pipes[i]);
-        }
+        // TODO: is this good?
+        //for (int i = 0; i < 3; ++i) {
+        //    close_pipe(local_pipes[i]);
+        //}
 
         ASSERT_ERRNO(execv(abs_executable_string.c_str(), executable_args) != -1);
         exit(0);
     }
     
-    created_process = {executable_args, pid};
+    created_process = {pid, executable_args};
     
     #endif // BUILDIT_OS_WINDOWS
-
-    for (int i = 0; i < 3; ++i) {
-        if (owns_pipes[i]) {
-            close_pipe(local_pipes[i]);
-        }
-    }
     
     fs::current_path(prev_working_dir);
+
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Executed: " + as_string(created_process));
         
     if(async == NULL){
         return wait_for_process(created_process);
@@ -335,28 +442,31 @@ int execute_cmd(Command cmd, vector<Process>* async){
     return 0;
 }
 int wait_for_process(Process process){
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Waiting for process: " + as_string(process));
+    int ret_code = 0;
     #ifdef BUILDIT_OS_WINDOWS
-    if(get_debug()) log(LOG_LEVEL_DEBUG, "Waiting for process id: " + to_string(process.process.dwProcessId));
     
     DWORD exit_code = 0;
     
-    ASSERT_WINAPI(WaitForSingleObject(process.process.hProcess, INFINITE) == WAIT_OBJECT_0);
-    ASSERT_WINAPI(GetExitCodeProcess(process.process.hProcess, &exit_code));
+    ASSERT_WINAPI(WaitForSingleObject(process.pi.hProcess, INFINITE) == WAIT_OBJECT_0);
+    ASSERT_WINAPI(GetExitCodeProcess(process.pi.hProcess, &exit_code));
 
-    ASSERT_WINAPI(CloseHandle(process.process.hProcess) != 0);
-    ASSERT_WINAPI(CloseHandle(process.process.hThread) != 0);
+    ASSERT_WINAPI(CloseHandle(process.pi.hProcess) != 0);
+    ASSERT_WINAPI(CloseHandle(process.pi.hThread) != 0);
     
-    return exit_code;
+    ret_code = exit_code;
     
     #else // !BUILDIT_OS_WINDOWS
-    if(get_debug()) log(LOG_LEVEL_DEBUG, "Waiting for process id: " + to_string(process.pid));
     
     int child_status = 0;
     ASSERT_ERRNO(waitpid(process.pid, &child_status, 0) != -1);
     free_cstr_arr(process.executable_args);
-    return WEXITSTATUS(child_status);
+    ret_code = WEXITSTATUS(child_status);
     
     #endif // BUILDIT_OS_WINDOWS
+
+    if(get_debug()) log(LOG_LEVEL_DEBUG, "Process: " + as_string(process) + " Exited with: " + to_string(ret_code));
+    return ret_code;
 }
 vector<int> execute_cmds(vector<Command> cmds, vector<Process>* async){
     vector<int> return_vec = vector<int>();
@@ -381,133 +491,24 @@ vector<int> chain_cmds(vector<Command> cmds, vector<Process>* async) {
         pipes.push_back(open_pipe());
     }
     for(size_t i = 0; i < cmds.size(); i++) {
-        // TODO: Probably needs switching pipe cmd read write with each other
-        if(i > 0) cmds[i].stdin = pipes[i - 1];
-        if(i < cmds.size() - 1) cmds[i].stdout = pipes[i];
+        if(i > 0) cmds[i].in_pipe = pipes[i - 1];
+        if(i < cmds.size() - 1) cmds[i].out_pipe = pipes[i];
         returns.push_back(execute_cmd(cmds[i], IF_NULL(async, &async_local, async)));
     }
     if(async == NULL) {
         returns = wait_for_processes(async_local);
     }
-    for(size_t i = 0; i < cmds.size() + 1; i++) {
-        close_pipe(pipes[i]);
-    }
+    // TODO: If async then should this be here or after wait? 
+    //for(size_t i = 0; i < pipes.size(); i++) {
+    //    close_pipe(pipes[i]);
+    //}
     return returns;
 }
-
-//////////////////////////////////////////////////////////////////////
-// Piping
-// \/
-//////////////////////////////////////////////////////////////////////
-
-Pipe open_pipe(){
-    if(get_debug()) log(LOG_LEVEL_DEBUG, "Opening pipe");
-    Pipe p;
-#ifdef BUILDIT_OS_WINDOWS
-    SECURITY_ATTRIBUTES sa;
-    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-    sa.bInheritHandle = TRUE;
-    sa.lpSecurityDescriptor = NULL;
-    
-    ASSERT_WINAPI(CreatePipe(&p.read_handle, &p.write_handle, &sa, 0));
-#else
-    int fds[2];
-    ASSERT_ERRNO(pipe(fds) == 0);
-    p.read_fd = fds[0];
-    p.write_fd = fds[1];
-#endif
-    return p;
-}
-void close_pipe(Pipe pipe) {
-    if(get_debug()) log(LOG_LEVEL_DEBUG, "Closing pipe: \"" + as_string(pipe) + "\"");
+Process get_current_process() {
     #ifdef BUILDIT_OS_WINDOWS
-    if (pipe.read_handle != INVALID_HANDLE_VALUE && pipe.read_handle != NULL) {
-        CloseHandle(pipe.read_handle);
-    }
-    if (pipe.write_handle != INVALID_HANDLE_VALUE && pipe.write_handle != NULL) {
-        CloseHandle(pipe.write_handle);
-    }
+    return LIT(Process){ LIT(PROCESS_INFORMATION){ GetCurrentProcess(), GetCurrentThread(), GetCurrentProcessId() , GetCurrentThreadId() }};
     #else
-    if (pipe.read_fd > -1) close(pipe.read_fd);
-    if (pipe.write_fd > -1) close(pipe.write_fd);
-    #endif
-}
-Pipe pipe_to_file(fs::path file) {
-    fs::path abs_file = canonize_path(file);
-    if(get_debug()) log(LOG_LEVEL_DEBUG, "Opening pipe to file: \"" + abs_file.string() +"\"");
-    Pipe p;
-#ifdef BUILDIT_OS_WINDOWS
-    p.read_handle = INVALID_HANDLE_VALUE;
-    p.write_handle = CreateFileA(abs_file.string().c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    ASSERT_WINAPI(p.write_handle != INVALID_HANDLE_VALUE);
-#else
-    p.read_fd = -1;
-    p.write_fd = open(abs_file.string().c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0666);
-    ASSERT_ERRNO(p.write_fd > -1);
-#endif
-    return p;
-}
-Pipe pipe_from_file(fs::path file) {
-    fs::path abs_file = canonize_path(file);
-    if(get_debug()) log(LOG_LEVEL_DEBUG, "Opening pipe from file: \"" + abs_file.string() +"\"");
-    Pipe p;
-#ifdef BUILDIT_OS_WINDOWS
-    p.write_handle = INVALID_HANDLE_VALUE;
-    p.read_handle = CreateFileA(abs_file.string().c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    ASSERT_WINAPI(p.read_handle != INVALID_HANDLE_VALUE);
-#else
-    p.write_fd = -1;
-    p.read_fd = open(abs_file.string().c_str(), O_RDONLY);
-    ASSERT_ERRNO(p.read_fd > -1);
-#endif
-    return p;
-}
-Pipe pipe_from_file_stream(FILE* stream_in, FILE* stream_out) {
-    Pipe p;
-    #ifdef BUILDIT_OS_WINDOWS
-    if (stream_in != 0 ) {
-        int fd = _fileno(stream_in);
-        p.read_handle = (HANDLE)_get_osfhandle(fd);
-        ASSERT_WINAPI(p.read_handle != INVALID_HANDLE_VALUE);
-    }
-    if (stream_out != 0 ) {
-        int fd = _fileno(stream_out);
-        p.write_handle = (HANDLE)_get_osfhandle(fd);
-        ASSERT_WINAPI(p.read_handle != INVALID_HANDLE_VALUE);
-    }
-    #else
-    if (stream_in != 0 ) {
-        p.read_fd = fileno(stream_in);
-        ASSERT_ERRNO(p.read_fd > -1);
-    }
-    if (stream_out != 0 ) {
-        p.write_fd = fileno(stream_out);
-        ASSERT_ERRNO(p.write_fd > -1);
-    }
-    #endif
-    return p;
-}
-Pipe pipe_stdin(){
-    return pipe_from_file_stream(stdin,  NULL);
-}
-Pipe pipe_stdout(){
-    return pipe_from_file_stream(stdout, NULL);
-}
-Pipe pipe_stderr(){
-    return pipe_from_file_stream(stderr, NULL);
-}
-Pipe pipe_invalid(){
-    #ifdef BUILDIT_OS_WINDOWS
-    return LIT(Pipe){INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE};
-    #else
-    return LIT(Pipe){-1, -1};
-    #endif
-}
-bool is_pipe_invalid(Pipe pipe) {
-    #ifdef BUILDIT_OS_WINDOWS
-    return pipe.write_handle == INVALID_HANDLE_VALUE && pipe.read_handle == INVALID_HANDLE_VALUE;
-    #else
-    return pipe.write_fd < 0 && pipe.read_fd < 0;
+    return LIT(Process){ getpid(), NULL};
     #endif
 }
 
@@ -561,8 +562,9 @@ void log(Log_Level level, string msg) {
         case LOG_LEVEL_ERROR:
         cerr << "[ERROR] "   << msg << endl;
         break;
-        case LOG_LEVEL_DEBUG:
-        cerr << "[DEBUG] "    << msg << endl;
+        case LOG_LEVEL_DEBUG: {
+            cerr << "[DEBUG PID: " + as_string(get_current_process()) + "] " << msg << endl;
+        }
         break;
         case LOG_LEVEL_TODO:
         cerr << "[TODO] "    << msg << endl;
@@ -686,13 +688,20 @@ bool vec_any_nonzero(std::vector<int> vec) {
 //////////////////////////////////////////////////////////////////////
 
 string as_string(Command cmd){
-    return cmd.executable.string() + " " + concat_str_vec(cmd.arguments, " ") + " " + cmd.working_dir.string() + " " + as_string(cmd.stdin) + " " + as_string(cmd.stdout) + " " + as_string(cmd.stderr);
+    return cmd.executable.string() + " " + concat_str_vec(cmd.arguments, " ") + " " + cmd.working_dir.string() + " " + as_string(cmd.in_pipe) + " " + as_string(cmd.out_pipe) + " " + as_string(cmd.err_pipe);
 }
 string as_string(Pipe pipe){
     #ifdef BUILDIT_OS_WINDOWS
-    return to_string(pipe.read_handle) + " " + to_string(pipe.write_handle);
+    return to_string((uintptr_t)pipe.read_handle) + " " + to_string((uintptr_t)pipe.write_handle);
     #else
     return to_string(pipe.read_fd) + " " + to_string(pipe.write_fd);
+    #endif
+}
+string as_string(Process process){
+    #ifdef BUILDIT_OS_WINDOWS
+    return to_string(process.pi.dwProcessId);
+    #else
+    return to_string(process.pid);
     #endif
 }
 
